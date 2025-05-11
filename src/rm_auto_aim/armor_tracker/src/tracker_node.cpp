@@ -31,7 +31,7 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   // xa = x_armor, xc = x_robot_center
   // state: xc, v_xc, yc, v_yc, za, v_za, yaw, v_yaw, r
   // measurement: xa, ya, za, yaw
-  // f - Process function
+  // f - Process function 过程函数对状态进行更新
   auto f = [this](const Eigen::VectorXd & x) {
     Eigen::VectorXd x_new = x;
     x_new(0) += x(1) * dt_;
@@ -56,7 +56,7 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
     // clang-format on
     return f;
   };
-  // h - Observation function
+  // h - Observation function 观测函数对状态进行测量
   auto h = [](const Eigen::VectorXd & x) {
     Eigen::VectorXd z(4);
     double xc = x(0), yc = x(2), yaw = x(6), r = x(8);
