@@ -43,7 +43,7 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
   // J_f - Jacobian of process function
   auto j_f = [this](const Eigen::VectorXd &) {
     Eigen::MatrixXd f(9, 9);
-    // clang-format off
+    // clang-format off 临时禁用格式化工具，确保矩阵按指定格式排列
     f <<  1,   dt_, 0,   0,   0,   0,   0,   0,   0,
           0,   1,   0,   0,   0,   0,   0,   0,   0,
           0,   0,   1,   dt_, 0,   0,   0,   0,   0,
