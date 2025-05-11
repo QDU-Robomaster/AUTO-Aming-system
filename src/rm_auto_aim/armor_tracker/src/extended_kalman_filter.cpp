@@ -2,6 +2,15 @@
 
 namespace rm_auto_aim
 {
+/*
+f:过程函数
+h:观测函数
+j_f:过程函数的雅可比矩阵
+j_h:测量函数的雅可比矩阵
+u_q:过程噪声协方差矩阵
+u_r:测量噪声协方差矩阵
+P0:初始状态协方差矩阵
+*/
 ExtendedKalmanFilter::ExtendedKalmanFilter(
   const VecVecFunc & f, const VecVecFunc & h, const VecMatFunc & j_f, const VecMatFunc & j_h,
   const VoidMatFunc & u_q, const VecMatFunc & u_r, const Eigen::MatrixXd & P0)

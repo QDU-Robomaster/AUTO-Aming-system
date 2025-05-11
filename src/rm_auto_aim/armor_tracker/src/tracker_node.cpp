@@ -79,7 +79,7 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
     // clang-format on
     return h;
   };
-  // update_Q - process noise covariance matrix
+  // update_Q - process noise covariance matrix 过程噪声协方差矩阵
   s2qxyz_ = declare_parameter("ekf.sigma2_q_xyz", 20.0);
   s2qyaw_ = declare_parameter("ekf.sigma2_q_yaw", 100.0);
   s2qr_ = declare_parameter("ekf.sigma2_q_r", 800.0);
@@ -103,7 +103,7 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
     // clang-format on
     return q;
   };
-  // update_R - measurement noise covariance matrix
+  // update_R - measurement noise covariance matrix 观测噪声协方差矩阵
   r_xyz_factor = declare_parameter("ekf.r_xyz_factor", 0.05);
   r_yaw = declare_parameter("ekf.r_yaw", 0.02);
   auto u_r = [this](const Eigen::VectorXd & z) {
