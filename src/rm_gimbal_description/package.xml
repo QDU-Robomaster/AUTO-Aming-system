@@ -4,7 +4,7 @@
   <name>rm_gimbal_description</name>
   <version>0.0.0</version>
   <description>TODO: Package description</description>
-  <maintainer email="sink.chen@foxmail.com">chenjun</maintainer>
+  <maintainer email="2972689924@qq.com">kyle</maintainer>
   <license>TODO: License declaration</license>
 
   <buildtool_depend>ament_cmake</buildtool_depend>
