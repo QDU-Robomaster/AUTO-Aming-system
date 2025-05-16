@@ -67,15 +67,15 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions & options)
     return z;
   };
   // J_h - Jacobian of observation function
-  auto j_h = [](const Eigen::VectorXd & x) {
+  auto j_h = [](const Eigen::VectorXd & x) {  //状体量到观测量的一个转换矩阵，将整车c的状态转换为装甲板a的状态，用预测之后的c推出预测之后的a
     Eigen::MatrixXd h(4, 9);
     double yaw = x(6), r = x(8);
     // clang-format off
-    //    xc   v_xc yc   v_yc za   v_za yaw         v_yaw r
-    h <<  1,   0,   0,   0,   0,   0,   r*sin(yaw), 0,   -cos(yaw),
-          0,   0,   1,   0,   0,   0,   -r*cos(yaw),0,   -sin(yaw),
-          0,   0,   0,   0,   1,   0,   0,          0,   0,
-          0,   0,   0,   0,   0,   0,   1,          0,   0;
+    //              xc   v_xc yc   v_yc za   v_za yaw         v_yaw r
+    h <<  /*xa*/    1,   0,   0,   0,   0,   0,   r*sin(yaw), 0,   -cos(yaw),
+          /*ya*/    0,   0,   1,   0,   0,   0,   -r*cos(yaw),0,   -sin(yaw),
+          /*za*/    0,   0,   0,   0,   1,   0,   0,          0,   0,
+          /*yaw*/   0,   0,   0,   0,   0,   0,   1,          0,   0;
     // clang-format on
     return h;
   };
@@ -288,7 +288,7 @@ void ArmorTrackerNode::armorsCallback(const auto_aim_interfaces::msg::Armors::Sh
       send_msg.pitch = pitch;
       send_msg.yaw = yaw;
 
-      std::cout << "aim_x: " << aim_x << " aim_y: " << aim_y << " aim_z: " << aim_z << " pitch: " << pitch << " yaw: " << yaw << std::endl;
+      //std::cout << "aim_x: " << aim_x << " aim_y: " << aim_y << " aim_z: " << aim_z << " pitch: " << pitch << " yaw: " << yaw << std::endl;
     }
   }
 

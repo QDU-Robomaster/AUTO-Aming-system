@@ -22,54 +22,49 @@ Tracker::Tracker(double max_match_distance, double max_match_yaw_diff)
   tracked_id(std::string("")),
   measurement(Eigen::VectorXd::Zero(4)),
   target_state(Eigen::VectorXd::Zero(9)),
-  max_match_distance_(max_match_distance),  // 对成员对象 max_match_distance 初始化
+  max_match_distance_(max_match_distance),
   max_match_yaw_diff_(max_match_yaw_diff)
 {
 }
 
-void Tracker::init(const Armors::SharedPtr & armors_msg)  //tracker初始化
+void Tracker::init(const Armors::SharedPtr & armors_msg)
 {
-  // 初始条件判定
-  if (armors_msg->armors.empty()) { //判断装甲板库是不是空的
+  if (armors_msg->armors.empty()) {
     return;
   }
 
-  // 简单地选择最接近图像中心的装甲板
+
   double min_distance = DBL_MAX;  //定义最大初始值
   tracked_armor = armors_msg->armors[0];
   for (const auto & armor : armors_msg->armors) {
     if (armor.distance_to_image_center < min_distance) {
       min_distance = armor.distance_to_image_center;
       tracked_armor = armor;
-    } //* 选择距离屏幕中心最近的装甲板 为被追踪的装甲板
+    } // 选择距离屏幕中心最近的装甲板 为被追踪的装甲板，一旦选定跟踪目标后，在LOST之前不会切换目标，即使新目标在中心
   }
 
-  initEKF(tracked_armor); //初始化卡尔曼
-  RCLCPP_DEBUG(rclcpp::get_logger("armor_tracker"), "Init EKF!"); // 正在ekf初始化 [DEBUG] [timestamp] [armor_tracker]: Init EKF!
+  initEKF(tracked_armor);
+  RCLCPP_DEBUG(rclcpp::get_logger("armor_tracker"), "Init EKF!");
 
-  tracked_id = tracked_armor.number;  //这块装甲板id被标记
-  tracker_state = DETECTING;  //此时正在追踪
+  tracked_id = tracked_armor.number;
+  tracker_state = DETECTING;
 
-  updateArmorsNum(tracked_armor); //更新装甲板
-} // Tracker::init
+  updateArmorsNum(tracked_armor);
+}
 
 
-void Tracker::update(const Armors::SharedPtr & armors_msg)  //更新tracker
+void Tracker::update(const Armors::SharedPtr & armors_msg)
 {
-  // KF 预测
-  Eigen::VectorXd ekf_prediction = ekf.predict();
-  RCLCPP_DEBUG(rclcpp::get_logger("armor_tracker"), "EKF predict"); // 正在ekf [DEBUG] [timestamp] [armor_tracker]: EKF predict
+  Eigen::VectorXd ekf_prediction = ekf.predict();//根据整车c的预测，得出装甲板的位置
+  RCLCPP_DEBUG(rclcpp::get_logger("armor_tracker"), "EKF predict");
+  bool matched = false;   //对预测的装甲板和观测的装甲板进行匹配
+  target_state = ekf_prediction; //整车c的预测向量
 
-  bool matched = false; //?判断匹配 默认没找到的
-  // 如果未找到匹配的装甲板，则使用 KF 预测作为默认目标状态 就是matched = false
-  target_state = ekf_prediction;
 
-  // 在找到之后
-  if (!armors_msg->armors.empty())  //并非空
+  if (!armors_msg->armors.empty())
   {
-    // “找到具有相同 ID 的最近装甲。”
-    Armor same_id_armor;  //在找到装甲板之后,这是同时找到的另外的装甲版
-    int same_id_armors_count = 0; //同时发现的数量
+    Armor same_id_armor;
+    int same_id_armors_count = 0;
     auto predicted_position = getArmorPositionFromState(ekf_prediction);  //计算,根据原装甲板得到预测装甲板位置
     double min_position_diff = DBL_MAX; //最小位置差值,最大初始值
     double yaw_diff = DBL_MAX;  //定义yaw差值,预测装甲板和真实装甲板
@@ -83,17 +78,15 @@ void Tracker::update(const Armors::SharedPtr & armors_msg)  //更新tracker
         auto p = armor.pose.position; // p是真正的观察到的 装甲板的 position
         Eigen::Vector3d position_vec(p.x, p.y, p.z);
         double position_diff = (predicted_position - position_vec).norm();
-        //* 计算预测位置与当前装甲位置之间的欧几里得距离
 
-        // 找到离主装甲板最近预测装甲板
-        if (position_diff < min_position_diff) {
+        if (position_diff < min_position_diff) {//位置小于最小匹配距离，表明这就是预测的那一块装甲板
           min_position_diff = position_diff;
           yaw_diff = abs(orientationToYaw(armor.pose.orientation) - ekf_prediction(6));
-          tracked_armor = armor;  //此时标记这个装甲板是被标记的装甲板
+          tracked_armor = armor;
         }
       }
     }
-    // 在同名装甲板之中 找到预测差值最小的一个,并且储存预测差值,?我感觉,在车小陀螺之中,靠近相机的一块装甲板动的快,预测的差值应该会大.所以一般来说这里用的装甲板是边缘的装甲板
+
 
     // 存储tracker信息
     info_position_diff = min_position_diff;
@@ -183,7 +176,6 @@ void Tracker::initEKF(const Armor & a)
 }
 
 
-// 大改
 void Tracker::updateArmorsNum(const Armor & armor)
 {
   if (tracked_id == "outpost") {
