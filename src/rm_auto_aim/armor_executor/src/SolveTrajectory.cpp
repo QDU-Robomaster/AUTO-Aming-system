@@ -1,11 +1,3 @@
-/*
-@brief: 弹道解算 适配陈君的rm_vision
-@author: CodeAlan  华南师大Vanguard战队
-*/
-// 近点只考虑水平方向的空气阻力
-
-
-
 //TODO 完整弹道模型
 //TODO 适配英雄机器人弹道解算
 
@@ -122,8 +114,8 @@ float SolveTrajectory::pitchTrajectoryCompensation(float s, float z, float v) {
  * @param v_yaw yaw速度
  * @param timeDelay 时间延迟
  * 
- * @return true 
- * @return false 
+ * @return true
+ * @return false
  */
 bool SolveTrajectory::shouldFire(float tmp_yaw, float v_yaw, float timeDelay) {
 
