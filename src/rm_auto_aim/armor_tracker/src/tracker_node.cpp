@@ -1,6 +1,5 @@
 #include "armor_tracker/tracker_node.hpp"
 
-// STD
 #include <memory>
 #include <vector>
 
