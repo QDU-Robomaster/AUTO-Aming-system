@@ -14,7 +14,7 @@
 #include <string>
 #include <thread>
 
-
+//一个构造函数和析构函数
 namespace hik_camera
 {
 class HikCameraNode : public rclcpp::Node
