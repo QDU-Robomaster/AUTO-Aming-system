@@ -25,7 +25,7 @@ public:
     // width / height
     double min_ratio;
     double max_ratio;
-    // vertical angle
+    // vertical angle与垂直方向的最大差角
     double max_angle;
   };
 

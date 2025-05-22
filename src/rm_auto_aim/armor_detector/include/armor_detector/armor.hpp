@@ -18,10 +18,23 @@ const std::string ARMOR_TYPE_STR[3] = {"small", "large", "invalid"};
 struct Light : public cv::RotatedRect
 {
   Light() = default;
-  explicit Light(cv::RotatedRect box) : cv::RotatedRect(box)
+  explicit Light(cv::RotatedRect box) : cv::RotatedRect(box)//Light继承自cv::RotatedRect，可以直接使用其成员函数
+  {
+    // 计算灯条的中心点
+    center = box.center;
+    // 计算灯条的颜色
+    color = (box.angle < 0) ? RED : BLUE;
+
+    // 计算灯条的四个顶点
+    cv::Point2f p[4];  // 灯条四个点
+    box.points(p);
+    // 计算灯条的宽度和长度
+    width = box.size.width;
+    length = box.size.height;
+  }
   {
     cv::Point2f p[4];  //灯条四个点
-    box.points(p);
+    box.points(p);  //rotatedrect的points函数可以获取四个点的坐标
     std::sort(p, p + 4, [](const cv::Point2f & a, const cv::Point2f & b) { return a.y < b.y; });
     top = (p[0] + p[1]) / 2;//灯条顶部和底部中心点
     bottom = (p[2] + p[3]) / 2;
