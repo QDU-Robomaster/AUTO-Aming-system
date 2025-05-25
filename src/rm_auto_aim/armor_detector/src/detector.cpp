@@ -33,7 +33,7 @@ std::vector<Armor> Detector::detect(const cv::Mat & input)
   return armors_;
 }
 
-cv::Mat Detector::preprocessImage(const cv::Mat & rgb_img)
+cv::Mat Detector::preprocessImage(const cv::Mat & rgb_img) //图像预处理
 {
   cv::Mat gray_img;
   cv::cvtColor(rgb_img, gray_img, cv::COLOR_RGB2GRAY);
@@ -47,15 +47,15 @@ cv::Mat Detector::preprocessImage(const cv::Mat & rgb_img)
 std::vector<Light> Detector::findLights(const cv::Mat & rbg_img, const cv::Mat & binary_img)
 {
   using std::vector;
-  vector<vector<cv::Point>> contours;
-  vector<cv::Vec4i> hierarchy;//// 定义一个向量，用于存储图像中检测到的所有轮廓的层级信息
+  vector<vector<cv::Point>> contours;  //// 定义一个向量，用于存储图像中检测到的所有轮廓
+  vector<cv::Vec4i> hierarchy;  // 定义一个向量，用于存储图像中检测到的所有轮廓的层级信息
   cv::findContours(binary_img, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
 
   vector<Light> lights;
   this->debug_lights.data.clear();
 
   for (const auto & contour : contours) {
-    if (contour.size() < 5) continue;
+    if (contour.size() < 5) continue;//跳过轮廓点数太少的，避免误判，减小干扰
 
     auto r_rect = cv::minAreaRect(contour);
     auto light = Light(r_rect);
