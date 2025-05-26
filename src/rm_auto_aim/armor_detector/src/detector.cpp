@@ -49,7 +49,7 @@ std::vector<Light> Detector::findLights(const cv::Mat & rbg_img, const cv::Mat &
   using std::vector;
   vector<vector<cv::Point>> contours;  //// 定义一个向量，用于存储图像中检测到的所有轮廓
   vector<cv::Vec4i> hierarchy;  // 定义一个向量，用于存储图像中检测到的所有轮廓的层级信息
-  cv::findContours(binary_img, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);
+  cv::findContours(binary_img, contours, hierarchy, cv::RETR_EXTERNAL, cv::CHAIN_APPROX_SIMPLE);//仅检索最外层轮廓（忽略嵌套轮廓），仅保留水平、垂直和对角方向的端点（矩形仅需4个点）
 
   vector<Light> lights;
   this->debug_lights.data.clear();
@@ -70,7 +70,7 @@ std::vector<Light> Detector::findLights(const cv::Mat & rbg_img, const cv::Mat &
         // Iterate through the ROI
         for (int i = 0; i < roi.rows; i++) {
           for (int j = 0; j < roi.cols; j++) {
-            if (cv::pointPolygonTest(contour, cv::Point2f(j + rect.x, i + rect.y), false) >= 0) {
+            if (cv::pointPolygonTest(contour, cv::Point2f(j + rect.x, i + rect.y), false) >= 0) {//函数用于判断一个点是否在给定的轮廓（多边形）内(>0)，或者在轮廓上(=0)，亦或是在轮廓外(<0)。
               // if point is inside contour
               sum_r += roi.at<cv::Vec3b>(i, j)[0];
               sum_b += roi.at<cv::Vec3b>(i, j)[2];
