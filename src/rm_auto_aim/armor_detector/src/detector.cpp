@@ -66,7 +66,7 @@ std::vector<Light> Detector::findLights(const cv::Mat & rbg_img, const cv::Mat &
         0 <= rect.x && 0 <= rect.width && rect.x + rect.width <= rbg_img.cols && 0 <= rect.y &&
         0 <= rect.height && rect.y + rect.height <= rbg_img.rows) {
         int sum_r = 0, sum_b = 0;
-        auto roi = rbg_img(rect);
+        auto roi = rbg_img(rect);   //创建一个指向rbg_img图像rect区域的一张新图ROI
         // Iterate through the ROI
         for (int i = 0; i < roi.rows; i++) {
           for (int j = 0; j < roi.cols; j++) {
@@ -134,20 +134,20 @@ std::vector<Armor> Detector::matchLights(const std::vector<Light> & lights)
   return armors;
 }
 
-// Check if there is another light in the boundingRect formed by the 2 lights
+// Check if there is another light in the boundingRect formed by the 2 lights  判断是否存在干扰灯条
 bool Detector::containLight(
   const Light & light_1, const Light & light_2, const std::vector<Light> & lights)
 {
-  // 1. 创建包围盒：用两个灯条的顶端和底端点构建最小外接矩形
+  // 1. 创建装甲板：用两个灯条的顶端和底端点构建最小外接矩形
   auto points = std::vector<cv::Point2f>{light_1.top, light_1.bottom, light_2.top, light_2.bottom};
   auto bounding_rect = cv::boundingRect(points); // 生成整数坐标的矩形
 
-  // 2. 遍历所有灯条进行碰撞检测
+  // 2. 遍历所有灯条进行检查
   for (const auto & test_light : lights) {
     // 跳过当前正在配对的两个灯条（通过中心点坐标比较）
     if (test_light.center == light_1.center || test_light.center == light_2.center) continue;
 
-    // 3. 检查其他灯条的关键点是否在包围盒内
+    // 3. 检查其他灯条的关键点是否在装甲板内
     if (
       bounding_rect.contains(test_light.top) ||    // 顶点在区域内
       bounding_rect.contains(test_light.bottom) || // 底点在区域内
