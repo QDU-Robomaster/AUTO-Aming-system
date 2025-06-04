@@ -1,5 +1,3 @@
-// Copyright 2022 Chen Jun
-
 #include <gtest/gtest.h>
 
 #include <rclcpp/executors.hpp>
