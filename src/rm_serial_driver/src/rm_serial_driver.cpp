@@ -237,7 +237,7 @@ void RMSerialDriver::sendData(const auto_aim_interfaces::msg::Send::SharedPtr ms
 
     packet.pitch = pitch_trans(msg->pitch);
     // std::cout<<pitch_trans(msg->pitch)<<std::endl;
-    packet.yaw = yaw_trans(msg->yaw-0.02);
+    packet.yaw = yaw_trans(msg->yaw);
     // packet.pitch = pitch_trans(-0.05);s
     // packet.yaw = 0.3;
 
