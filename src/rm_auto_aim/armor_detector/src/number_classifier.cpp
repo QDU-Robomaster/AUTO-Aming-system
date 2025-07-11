@@ -88,7 +88,7 @@ void NumberClassifier::classify(std::vector<Armor> & armors)
     cv::Mat outputs = net_.forward();
 
     // Do softmax
-    float max_prob = *std::max_element(outputs.begin<float>(), outputs.end<float>());
+    float max_prob = *std::max_element(outputs.begin<float>(), outputs.end<float>()); //max_element函数返回的是一个迭代器，要获取实际值，需要解引用*
     cv::Mat softmax_prob;
     cv::exp(outputs - max_prob, softmax_prob);
     float sum = static_cast<float>(cv::sum(softmax_prob)[0]);
@@ -109,7 +109,7 @@ void NumberClassifier::classify(std::vector<Armor> & armors)
   }
 
   armors.erase(
-    std::remove_if(
+    std::remove_if(  //remove_if会把向量中满足特定条件的元素移动到向量末尾，返回一个指向新的逻辑末尾的迭代器
       armors.begin(), armors.end(),
       [this](const Armor & armor) {
         if (armor.confidence < threshold) {
