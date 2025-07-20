@@ -1,5 +1,8 @@
 # rm_auto_aim
 
+
+<img width="1609" height="750" alt="c91671685296ae8489b45131c587773" src="https://github.com/user-attachments/assets/69a5c02a-e5b9-4cdd-8124-9f7d3adf654d" />
+
 ## Overview
 
 运行环境：Ubuntu 22.04 / ROS2 Humble (未在其他环境下测试)
