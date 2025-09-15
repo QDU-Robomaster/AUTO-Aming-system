@@ -37,10 +37,6 @@ IMU读值快，时间戳对齐采用线性插值法，用最接近图像数据�
 ### 7.自启动脚本 auto.sh
 
 
-#TODO
-1.界定自瞄的连续快速响应范围，在UI图中画出来，避免操作手不知道哪一块是自瞄的边缘范围，自瞄并不能连续响应
-2.打符
-3.与下位机通信的优化，去除冗余，增加调节键
 # 使用
 ### 安装ROS
   [Ubuntu22.04.1安装ROS2入门级教程(ros-humble)_ros humble_Python-AI Xenon的博客-CSDN博客](https://blog.csdn.net/yxn4065/article/details/127352587)
