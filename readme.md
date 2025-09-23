@@ -63,7 +63,7 @@ sudo apt install ros-humble-foxglove-bridge
 
 ### 编译
 
-  在 `ros_ws` 目录下
+  在 `AUTO_AIM` 目录下
 
   ```Shell
 rosdep install --from-paths src --ignore-src -r -y
