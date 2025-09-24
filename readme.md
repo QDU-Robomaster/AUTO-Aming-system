@@ -43,7 +43,7 @@ IMU读值快，时间戳对齐采用线性插值法，用最接近图像数据�
 
 ### 创建工作空间
 
-  ```Shell
+```Shell
 mkdir -p ~/AUTO_AIM
 ```
 
@@ -51,12 +51,12 @@ mkdir -p ~/AUTO_AIM
 
   在 `AUTO_AIM` 目录下
 
-  ```Shell
+```Shell
 git clone git@github.com:MzKyle/Observation-of-the-whole-vehicle.git
 ```
 
 
-  ```Shell
+```Shell
 sudo apt install ros-humble-foxglove-bridge
 ```
 
@@ -65,32 +65,32 @@ sudo apt install ros-humble-foxglove-bridge
 
   在 `AUTO_AIM` 目录下
 
-  ```Shell
+```Shell
 rosdep install --from-paths src --ignore-src -r -y
 ```
 
 
-  ```Shell
+```Shell
 colcon build --symlink-install
 ```
 
 
 ### 运行节点
 
-  ```Shell
+```Shell
 sudo chmod 777 /dev/ttyACM0
 ```
 
 
   运行每个节点，必须新建终端并输入命令，且运行前需要执行 `source install/setup.bash`
 
-  ```Shell
+```Shell
 source install/setup.bash
 ros2 launch rm_vision_bringup no_hardware.launch.py
 ```
 
 
-  ```Shell
+```Shell
 source install/setup.bash
 ros2 launch rm_vision_bringup vision_bringup.launch.py
 ```
@@ -105,13 +105,13 @@ ros2 launch auto_aim_bringup auto_aim.launch.py
 ```
 
 
-    ```Shell
+```Shell
 source install/setup.bash
 ros2 launch hik_camera hik_camera.launch.py
 ```
 
 
-    ```Shell
+```Shell
 source install/setup.bash
 ros2 launch rm_serial_driver serial_driver.launch.py
 ```
@@ -120,8 +120,8 @@ ros2 launch rm_serial_driver serial_driver.launch.py
 # 启动可视化
 
   打开新的终端
-
-  ```Shell
+  
+```Shell
 source install/setup.bash
 ros2 launch foxglove_bridge foxglove_bridge_launch.xml port:=8765
 ```
