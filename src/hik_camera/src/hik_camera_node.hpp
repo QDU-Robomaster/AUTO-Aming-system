@@ -61,12 +61,10 @@ public:
     convert_param_.enDstPixelType = PixelType_Gvsp_RGB8_Packed;
 
     // 创建 rclcpp::Node 实例
-    auto node = std::make_shared<rclcpp::Node>("hik_camera_node");
-    node_ = node.get();
-
+    node_ = rclcpp::Node::make_shared("hik_camera_node");
     // 使用该节点实例来创建 CameraPublisher
     auto qos = use_sensor_data_qos ? rmw_qos_profile_sensor_data : rmw_qos_profile_default;
-    camera_pub_ = image_transport::create_camera_publisher(node.get(), "image_raw", qos);
+    camera_pub_ = image_transport::create_camera_publisher(node_.get(), "image_raw", qos);
 
     declareParameters();
 
@@ -143,7 +141,7 @@ public:
     XR_LOG_INFO("HikCameraNode destroyed!");
   }
 
-  rclcpp::Node * node_;
+  std::shared_ptr<rclcpp::Node> node_;
 
 private:
   void declareParameters()

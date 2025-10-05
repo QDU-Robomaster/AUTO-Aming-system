@@ -43,7 +43,7 @@ class ArmorTrackerNode
       double ekf_r_xyz_factor = 0.05, double ekf_r_yaw = 0.02,
       std::string target_frame = "odom");
 
-  rclcpp::Node* node_;
+  std::shared_ptr<rclcpp::Node> node_;
 
  private:
   void velocityCallback(const auto_aim_interfaces::msg::Velocity::SharedPtr velocity_msg);

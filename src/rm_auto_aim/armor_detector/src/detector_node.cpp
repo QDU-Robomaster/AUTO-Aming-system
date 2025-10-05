@@ -54,7 +54,7 @@ ArmorDetectorNode::ArmorDetectorNode(bool debug, int detect_color, int binary_th
   // Detector
   detector_ = initDetector();
 
-  node_ = new rclcpp::Node("armor_detector");
+  node_ = rclcpp::Node::make_shared("armor_detector");
 
   // Armors Publisher
   armors_pub_ = node_->create_publisher<auto_aim_interfaces::msg::Armors>(
@@ -292,9 +292,12 @@ void ArmorDetectorNode::createDebugPublishers()
   armors_data_pub_ = node_->create_publisher<auto_aim_interfaces::msg::DebugArmors>(
       "/detector/debug_armors", 10);
 
-  binary_img_pub_ = image_transport::create_publisher(node_, "/detector/binary_img");
-  number_img_pub_ = image_transport::create_publisher(node_, "/detector/number_img");
-  result_img_pub_ = image_transport::create_publisher(node_, "/detector/result_img");
+  binary_img_pub_ =
+      image_transport::create_publisher(node_.get(), "/detector/binary_img");
+  number_img_pub_ =
+      image_transport::create_publisher(node_.get(), "/detector/number_img");
+  result_img_pub_ =
+      image_transport::create_publisher(node_.get(), "/detector/result_img");
 }
 
 void ArmorDetectorNode::destroyDebugPublishers()

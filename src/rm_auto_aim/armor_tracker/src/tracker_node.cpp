@@ -25,7 +25,7 @@ ArmorTrackerNode::ArmorTrackerNode(
 {
   XR_LOG_INFO("Starting TrackerNode!");
 
-  node_ = new rclcpp::Node("armor_tracker");
+  node_ = rclcpp::Node::make_shared("armor_tracker");
 
   // Tracker
   double max_match_distance = tracker_max_match_distance;

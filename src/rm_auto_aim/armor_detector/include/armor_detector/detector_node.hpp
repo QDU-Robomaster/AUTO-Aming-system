@@ -37,7 +37,7 @@ class ArmorDetectorNode
                     double armor_max_angle = 35.0, double classifier_threshold = 0.7,
                     std::vector<std::string> ignore_classes = {"negative"});
 
-  rclcpp::Node* node_;
+  std::shared_ptr<rclcpp::Node> node_;
 
  private:
   void imageCallback(const sensor_msgs::msg::Image::ConstSharedPtr img_msg);

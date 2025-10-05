@@ -37,7 +37,8 @@ RMSerialDriver::RMSerialDriver(double timestamp_offset, std::string device_name,
   // INFO打印
   XR_LOG_INFO("Start RMSerialDriver!");
 
-  node_ = new rclcpp::Node("rm_serial_driver");
+  // node_ = new rclcpp::Node("rm_serial_driver");
+  node_ = rclcpp::Node::make_shared("rm_serial_driver");
 
   getParams();  // 传参
 

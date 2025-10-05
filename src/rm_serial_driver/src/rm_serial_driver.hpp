@@ -33,7 +33,7 @@ class RMSerialDriver
   explicit RMSerialDriver(double timestamp_offset, std::string device_name, int baud_rate,
                           std::string parity);
 
-  rclcpp::Node* node_;
+  std::shared_ptr<rclcpp::Node> node_;
 
   ~RMSerialDriver();
   float pitch_trans(float originAngle);
