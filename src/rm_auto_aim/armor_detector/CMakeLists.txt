@@ -24,7 +24,7 @@ ament_auto_find_build_dependencies()
 ## Build ##
 ###########
 
-ament_auto_add_library(${PROJECT_NAME} SHARED
+ament_auto_add_library(${PROJECT_NAME} STATIC
   DIRECTORY src
 )
 
@@ -83,4 +83,13 @@ file(
 target_sources(
   armor_detector
   PRIVATE ${IF_SOURCES}
+)
+
+target_link_libraries(
+    armor_detector
+    xr
+)
+
+target_include_directories(armor_detector
+  PUBLIC $<TARGET_PROPERTY:xr,INTERFACE_INCLUDE_DIRECTORIES>
 )

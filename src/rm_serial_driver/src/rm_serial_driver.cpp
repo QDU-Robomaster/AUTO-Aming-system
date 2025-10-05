@@ -18,6 +18,7 @@
 #include <vector>
 
 #include "crc.hpp"
+#include "logger.hpp"
 #include "packet.hpp"
 
 // 串口驱动
@@ -30,7 +31,7 @@ RMSerialDriver::RMSerialDriver(const rclcpp::NodeOptions& options)
 {
   //! serial_driver  第一部分 参数设置
   // INFO打印
-  RCLCPP_INFO(get_logger(), "Start RMSerialDriver!");
+  XR_LOG_INFO("Start RMSerialDriver!");
 
   getParams();  // 传参
 
@@ -69,8 +70,7 @@ RMSerialDriver::RMSerialDriver(const rclcpp::NodeOptions& options)
   }
   catch (const std::exception& ex)
   {
-    RCLCPP_ERROR(get_logger(), "Error creating serial port: %s - %s",
-                 device_name_.c_str(), ex.what());
+    XR_LOG_ERROR("Error creating serial port: %s - %s", device_name_.c_str(), ex.what());
     throw ex;
   }
 
@@ -155,18 +155,18 @@ void RMSerialDriver::receiveData()
           // std::cout << "xyz: (" << packet.aim_x << ", " << packet.aim_y << ",
           // " << packet.aim_z << ")" << std::endl; std::cout << "pitch: " <<
           // packet.pitch << "yaw: " << packet.yaw << std::endl;
-          // RCLCPP_INFO(get_logger(), "CRC OK!");
+          // XR_LOG_INFO("CRC OK!");
 
           // //LOG [Receive] aim_xyz
 
-          // RCLCPP_INFO(get_logger(), "[Receive] aim_x %f!", packet.aim_x);
-          // RCLCPP_INFO(get_logger(), "[Receive] aim_y %f!", packet.aim_y);
-          // RCLCPP_INFO(get_logger(), "[Receive] aim_z %f!", packet.aim_z);
+          // XR_LOG_INFO("[Receive] aim_x %f!", packet.aim_x);
+          // XR_LOG_INFO("[Receive] aim_y %f!", packet.aim_y);
+          // XR_LOG_INFO("[Receive] aim_z %f!", packet.aim_z);
 
           // // //LOG [Receive] [Receive] rp
-          // RCLCPP_INFO(get_logger(), "[Receive] roll %f!", packet.roll);
-          // RCLCPP_INFO(get_logger(), "[Receive] pitch %f!", packet.pitch);
-          // RCLCPP_INFO(get_logger(), "[Receive] yaw %f!", packet.yaw);
+          // XR_LOG_INFO("[Receive] roll %f!", packet.roll);
+          // XR_LOG_INFO("[Receive] pitch %f!", packet.pitch);
+          // XR_LOG_INFO("[Receive] yaw %f!", packet.yaw);
 
           //* 发布的 joint_state
           sensor_msgs::msg::JointState joint_state;
@@ -203,19 +203,17 @@ void RMSerialDriver::receiveData()
         }
         else
         {
-          RCLCPP_ERROR(get_logger(), "CRC error!");
+          XR_LOG_ERROR("CRC error!");
         }
       }
       else
       {
-        RCLCPP_WARN_THROTTLE(get_logger(), *get_clock(), 20, "Invalid header: %02X",
-                             header[0]);
+        XR_LOG_WARN("Invalid header: %02X", header[0]);
       }
     }
     catch (const std::exception& ex)
     {
-      RCLCPP_ERROR_THROTTLE(get_logger(), *get_clock(), 20,
-                            "Error while receiving data: %s", ex.what());
+      XR_LOG_ERROR("Error while receiving data: %s", ex.what());
       reopenPort();
     }
   }
@@ -247,8 +245,8 @@ void RMSerialDriver::sendData(
     packet.z = msg->position.z;
     packet.v_yaw = msg->v_yaw;
     // std::cout<<"--------------------------------------"<<std::endl;
-    // RCLCPP_INFO(get_logger(), "[Send] pitch %f!", msg->pitch);
-    // RCLCPP_INFO(get_logger(), "[Send] yaw %f!", msg->yaw);
+    // XR_LOG_INFO("[Send] pitch %f!", msg->pitch);
+    // XR_LOG_INFO("[Send] yaw %f!", msg->yaw);
 
     packet.pitch = pitch_trans(msg->pitch);
     // std::cout<<pitch_trans(msg->pitch)<<std::endl;
@@ -267,19 +265,19 @@ void RMSerialDriver::sendData(
 
     // 打印 data 结构体中的 xyz 和 yaw 值
     // std::cout << "[Send] is_fire" << packet.is_fire << std::endl;
-    // RCLCPP_INFO(get_logger(), "[Send] aim_x %f!", packet.x);
-    // RCLCPP_INFO(get_logger(), "[Send] aim_y %f!", packet.y);
-    // RCLCPP_INFO(get_logger(), "[Send] aim_z %f!", packet.z);
+    // XR_LOG_INFO("[Send] aim_x %f!", packet.x);
+    // XR_LOG_INFO("[Send] aim_y %f!", packet.y);
+    // XR_LOG_INFO("[Send] aim_z %f!", packet.z);
 
-    // RCLCPP_INFO(get_logger(),
+    // XR_LOG_INFO(
     // "-------------------------------------------------------------");
-    // RCLCPP_INFO(get_logger(), "[Send] pitch %f!", packet.pitch);
-    // RCLCPP_INFO(get_logger(), "[Send] yaw %f!", packet.yaw);
-    // RCLCPP_INFO(get_logger(),
+    // XR_LOG_INFO("[Send] pitch %f!", packet.pitch);
+    // XR_LOG_INFO("[Send] yaw %f!", packet.yaw);
+    // XR_LOG_INFO(
     // "-------------------------------------------------------------");
 
     // if(packet.is_fire == true){
-    //   RCLCPP_INFO(get_logger(), "--------------开火--------------");
+    //   XR_LOG_INFO("--------------开火--------------");
     // }
 
     //* 向串口发送数据
@@ -292,15 +290,14 @@ void RMSerialDriver::sendData(
     // 延迟
     std_msgs::msg::Float64 latency;
     latency.data = (this->now() - msg->header.stamp).seconds() * 1000.0;
-    RCLCPP_DEBUG_STREAM(get_logger(),
-                        "Total latency: " + std::to_string(latency.data) + "ms");
+    XR_LOG_DEBUG("Total latency: %fms", latency.data);
     latency_pub_->publish(latency);
 
     // 错误处理
   }
   catch (const std::exception& ex)
   {
-    RCLCPP_ERROR(get_logger(), "Error while sending data: %s", ex.what());
+    XR_LOG_ERROR("Error while sending data: %s", ex.what());
     reopenPort();
   }
 }
@@ -323,7 +320,7 @@ void RMSerialDriver::getParams()
   }
   catch (rclcpp::ParameterTypeException& ex)
   {
-    RCLCPP_ERROR(get_logger(), "The device name provided was invalid");
+    XR_LOG_ERROR("The device name provided was invalid");
     throw ex;
   }
 
@@ -333,7 +330,7 @@ void RMSerialDriver::getParams()
   }
   catch (rclcpp::ParameterTypeException& ex)
   {
-    RCLCPP_ERROR(get_logger(), "The baud_rate provided was invalid");
+    XR_LOG_ERROR("The baud_rate provided was invalid");
     throw ex;
   }
 
@@ -362,7 +359,7 @@ void RMSerialDriver::getParams()
   }
   catch (rclcpp::ParameterTypeException& ex)
   {
-    RCLCPP_ERROR(get_logger(), "The flow_control provided was invalid");
+    XR_LOG_ERROR("The flow_control provided was invalid");
     throw ex;
   }
 
@@ -390,7 +387,7 @@ void RMSerialDriver::getParams()
   }
   catch (rclcpp::ParameterTypeException& ex)
   {
-    RCLCPP_ERROR(get_logger(), "The parity provided was invalid");
+    XR_LOG_ERROR("The parity provided was invalid");
     throw ex;
   }
 
@@ -418,7 +415,7 @@ void RMSerialDriver::getParams()
   }
   catch (rclcpp::ParameterTypeException& ex)
   {
-    RCLCPP_ERROR(get_logger(), "The stop_bits provided was invalid");
+    XR_LOG_ERROR("The stop_bits provided was invalid");
     throw ex;
   }
 
@@ -428,7 +425,7 @@ void RMSerialDriver::getParams()
 
 void RMSerialDriver::reopenPort()
 {
-  RCLCPP_WARN(get_logger(), "Attempting to reopen port");
+  XR_LOG_WARN("Attempting to reopen port");
   try
   {
     if (serial_driver_->port()->is_open())
@@ -436,11 +433,11 @@ void RMSerialDriver::reopenPort()
       serial_driver_->port()->close();
     }
     serial_driver_->port()->open();
-    RCLCPP_INFO(get_logger(), "Successfully reopened port");
+    XR_LOG_INFO("Successfully reopened port");
   }
   catch (const std::exception& ex)
   {
-    RCLCPP_ERROR(get_logger(), "Error while reopening port: %s", ex.what());
+    XR_LOG_ERROR("Error while reopening port: %s", ex.what());
     if (rclcpp::ok())
     {
       rclcpp::sleep_for(std::chrono::seconds(1));
@@ -453,14 +450,14 @@ void RMSerialDriver::setParam(const rclcpp::Parameter& param)
 {
   if (!detector_param_client_->service_is_ready())
   {
-    RCLCPP_WARN(get_logger(), "Service not ready, skipping parameter set");
+    XR_LOG_WARN("Service not ready, skipping parameter set");
     return;
   }
 
   if (!set_param_future_.valid() ||
       set_param_future_.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
   {
-    RCLCPP_INFO(get_logger(), "Setting detect_color to %ld...", param.as_int());
+    XR_LOG_INFO("Setting detect_color to %ld...", param.as_int());
     set_param_future_ = detector_param_client_->set_parameters(
         {param},
         [this, param](const ResultFuturePtr& results)
@@ -469,13 +466,11 @@ void RMSerialDriver::setParam(const rclcpp::Parameter& param)
           {
             if (!result.successful)
             {
-              RCLCPP_ERROR(get_logger(), "Failed to set parameter: %s",
-                           result.reason.c_str());
+              XR_LOG_ERROR("Failed to set parameter: %s", result.reason.c_str());
               return;
             }
           }
-          RCLCPP_INFO(get_logger(), "Successfully set detect_color to %ld!",
-                      param.as_int());
+          XR_LOG_INFO("Successfully set detect_color to %ld!", param.as_int());
           initial_set_param_ = true;
         });
   }
@@ -485,13 +480,13 @@ void RMSerialDriver::resetTracker()
 {
   if (!reset_tracker_client_->service_is_ready())
   {
-    RCLCPP_WARN(get_logger(), "Service not ready, skipping tracker reset");
+    XR_LOG_WARN("Service not ready, skipping tracker reset");
     return;
   }
 
   auto request = std::make_shared<std_srvs::srv::Trigger::Request>();
   reset_tracker_client_->async_send_request(request);
-  RCLCPP_INFO(get_logger(), "Reset tracker!");
+  XR_LOG_INFO("Reset tracker!");
 }
 
 //! 角度换算
@@ -546,10 +541,3 @@ float RMSerialDriver::yaw_re_trans(float originAngle)
 }
 
 }  // namespace rm_serial_driver
-
-#include "rclcpp_components/register_node_macro.hpp"
-
-// Register the component with class_loader.
-// This acts as a sort of entry point, allowing the component to be discoverable
-// when its library is being loaded into a running process.
-RCLCPP_COMPONENTS_REGISTER_NODE(rm_serial_driver::RMSerialDriver)

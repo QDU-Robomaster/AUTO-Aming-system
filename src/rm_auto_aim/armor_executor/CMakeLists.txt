@@ -23,7 +23,7 @@ ament_auto_find_build_dependencies()
 ## Build ##
 ###########
 
-ament_auto_add_library(${PROJECT_NAME} SHARED
+ament_auto_add_library(${PROJECT_NAME} STATIC
   DIRECTORY src
 )
 

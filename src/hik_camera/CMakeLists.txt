@@ -15,7 +15,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 find_package(ament_cmake_auto REQUIRED)
 ament_auto_find_build_dependencies()
 
-ament_auto_add_library(${PROJECT_NAME} SHARED
+ament_auto_add_library(${PROJECT_NAME} STATIC
   ${CMAKE_CURRENT_SOURCE_DIR}/src/hik_camera_node.cpp
 )
 
@@ -64,4 +64,14 @@ ament_auto_package(
   INSTALL_TO_SHARE
   config
   launch
+)
+
+target_link_libraries(
+    hik_camera
+    xr
+)
+
+target_include_directories(hik_camera PUBLIC
+  ${CMAKE_BINARY_DIR}/src/rm_auto_aim/auto_aim_interfaces/rosidl_generator_cpp
+  PUBLIC $<TARGET_PROPERTY:xr,INTERFACE_INCLUDE_DIRECTORIES>
 )

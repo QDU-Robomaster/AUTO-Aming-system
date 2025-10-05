@@ -3,10 +3,10 @@
 #include <camera_info_manager/camera_info_manager.hpp>
 #include <image_transport/image_transport.hpp>
 #include <rclcpp/logging.hpp>
-#include <rclcpp/rclcpp.hpp>
-#include <rclcpp/utilities.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
+
+#include "libxr.hpp"
 
 // STL
 #include <chrono>
@@ -15,30 +15,39 @@
 #include <thread>
 #include <vector>
 
-//一个构造函数和析构函数
 namespace hik_camera
 {
-class HikCameraNode : public rclcpp::Node
+class HikCameraNode
 {
 public:
-  explicit HikCameraNode(const rclcpp::NodeOptions & options) : Node("hik_camera", options)
+  explicit HikCameraNode(
+    const std::string & camera_name = "narrow_stereo", int image_width = 1440,
+    int image_height = 1080,
+    const std::array<double, 9> & camera_matrix = {{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}},
+    const std::vector<double> & distortion_coefficients = {{0.0, 0.0, 0.0, 0.0, 0.0}},
+    const std::array<double, 9> & rectification_matrix =
+      {{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}},
+    const std::array<double, 12> & projection_matrix =
+      {{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}},
+    const std::string & distortion_model = "plumb_bob", bool use_sensor_data_qos = true,
+    double gain = 32.0, double exposure_time = 500.0)
+  : gain_(gain), exposure_time_(exposure_time), camera_name_(camera_name)
   {
-    RCLCPP_INFO(this->get_logger(), "Starting HikCameraNode!");
+    XR_LOG_INFO("Starting HikCameraNode!");
 
     MV_CC_DEVICE_INFO_LIST device_list;
     // enum device
     nRet = MV_CC_EnumDevices(MV_USB_DEVICE, &device_list);
-    RCLCPP_INFO(this->get_logger(), "Found camera count = %d", device_list.nDeviceNum);
+    XR_LOG_INFO("Found camera count = %d", device_list.nDeviceNum);
 
     while (device_list.nDeviceNum == 0 && rclcpp::ok()) {
-      RCLCPP_ERROR(this->get_logger(), "No camera found!");
-      RCLCPP_INFO(this->get_logger(), "Enum state: [%x]", nRet);
+      XR_LOG_ERROR("No camera found!");
+      XR_LOG_INFO("Enum state: [%x]", nRet);
       std::this_thread::sleep_for(std::chrono::seconds(1));
       nRet = MV_CC_EnumDevices(MV_USB_DEVICE, &device_list);
     }
 
     MV_CC_CreateHandle(&camera_handle_, device_list.pDeviceInfo[0]);
-
     MV_CC_OpenDevice(camera_handle_);
 
     // Get camera information
@@ -50,51 +59,34 @@ public:
     convert_param_.nHeight = img_info_.nHeightValue;
     convert_param_.enDstPixelType = PixelType_Gvsp_RGB8_Packed;
 
-    bool use_sensor_data_qos = this->declare_parameter("use_sensor_data_qos", true);
+    // 创建 rclcpp::Node 实例
+    auto node = std::make_shared<rclcpp::Node>("hik_camera_node");
+
+    // 使用该节点实例来创建 CameraPublisher
     auto qos = use_sensor_data_qos ? rmw_qos_profile_sensor_data : rmw_qos_profile_default;
-    camera_pub_ = image_transport::create_camera_publisher(this, "image_raw", qos);
+    camera_pub_ = image_transport::create_camera_publisher(node.get(), "image_raw", qos);
 
     declareParameters();
 
     MV_CC_StartGrabbing(camera_handle_);
 
-    // Load camera info
-    camera_name_ = this->declare_parameter("camera_name", "narrow_stereo");
+    camera_info_msg_.width = image_width;
+    camera_info_msg_.height = image_height;
 
-    camera_info_msg_.width = this->declare_parameter("image_width", 1440);
-    camera_info_msg_.height = this->declare_parameter("image_height", 1080);
-    auto camera_matrix = this->declare_parameter(
-      "camera_matrix", std::vector<double>{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
+    camera_info_msg_.k = camera_matrix;
 
-    for (size_t i = 0; i < camera_matrix.size(); i++) {
-      camera_info_msg_.k[i] = camera_matrix[i];
-    }
+    camera_info_msg_.d = distortion_coefficients;
 
-    camera_info_msg_.d = this->declare_parameter(
-      "distortion_coefficients", std::vector<double>{0.0, 0.0, 0.0, 0.0, 0.0});
+    camera_info_msg_.r = rectification_matrix;
 
-    auto rectification_matrix = this->declare_parameter(
-      "rectification_matrix", std::vector<double>{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
-    for (size_t i = 0; i < rectification_matrix.size(); i++) {
-      camera_info_msg_.r[i] = rectification_matrix[i];
-    }
+    camera_info_msg_.p = projection_matrix;
 
-    auto projection_matrix = this->declare_parameter(
-      "projection_matrix",
-      std::vector<double>{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
-    for (size_t i = 0; i < projection_matrix.size(); i++) {
-      camera_info_msg_.p[i] = projection_matrix[i];
-    }
-
-    camera_info_msg_.distortion_model = this->declare_parameter("distortion_model", "plumb_bob");
-
-    params_callback_handle_ = this->add_on_set_parameters_callback(
-      std::bind(&HikCameraNode::parametersCallback, this, std::placeholders::_1));
+    camera_info_msg_.distortion_model = distortion_model;
 
     capture_thread_ = std::thread{[this]() -> void {
       MV_FRAME_OUT out_frame;
 
-      RCLCPP_INFO(this->get_logger(), "Publishing image!");
+      XR_LOG_INFO("Publishing image!");
 
       image_msg_.header.frame_id = "camera_optical_frame";
       image_msg_.encoding = "rgb8";
@@ -110,7 +102,7 @@ public:
 
           MV_CC_ConvertPixelType(camera_handle_, &convert_param_);
 
-          image_msg_.header.stamp = this->now();
+          image_msg_.header.stamp = rclcpp::Clock().now();
           image_msg_.height = out_frame.stFrameInfo.nHeight;
           image_msg_.width = out_frame.stFrameInfo.nWidth;
           image_msg_.step = out_frame.stFrameInfo.nWidth * 3;
@@ -122,21 +114,21 @@ public:
           MV_CC_FreeImageBuffer(camera_handle_, &out_frame);
           fail_conut_ = 0;
         } else {
-          RCLCPP_WARN(this->get_logger(), "Get buffer failed! nRet: [%x]", nRet);
+          XR_LOG_WARN("Get buffer failed! nRet: [%x]", nRet);
           MV_CC_StopGrabbing(camera_handle_);
           MV_CC_StartGrabbing(camera_handle_);
           fail_conut_++;
         }
 
         if (fail_conut_ > 5) {
-          RCLCPP_FATAL(this->get_logger(), "Camera failed!");
+          XR_LOG_ERROR("Camera failed!");
           rclcpp::shutdown();
         }
       }
     }};
   }
 
-  ~HikCameraNode() override
+  ~HikCameraNode()
   {
     if (capture_thread_.joinable()) {
       capture_thread_.join();
@@ -146,7 +138,7 @@ public:
       MV_CC_CloseDevice(camera_handle_);
       MV_CC_DestroyHandle(&camera_handle_);
     }
-    RCLCPP_INFO(this->get_logger(), "HikCameraNode destroyed!");
+    XR_LOG_INFO("HikCameraNode destroyed!");
   }
 
 private:
@@ -161,18 +153,16 @@ private:
     MV_CC_GetFloatValue(camera_handle_, "ExposureTime", &f_value);
     param_desc.integer_range[0].from_value = f_value.fMin;
     param_desc.integer_range[0].to_value = f_value.fMax;
-    double exposure_time = this->declare_parameter("exposure_time", 5000, param_desc);
-    MV_CC_SetFloatValue(camera_handle_, "ExposureTime", exposure_time);
-    RCLCPP_INFO(this->get_logger(), "Exposure time: %f", exposure_time);
+    MV_CC_SetFloatValue(camera_handle_, "ExposureTime", exposure_time_);
+    XR_LOG_INFO("Exposure time: %f", exposure_time_);
 
     // Gain
     param_desc.description = "Gain";
     MV_CC_GetFloatValue(camera_handle_, "Gain", &f_value);
     param_desc.integer_range[0].from_value = f_value.fMin;
     param_desc.integer_range[0].to_value = f_value.fMax;
-    double gain = this->declare_parameter("gain", f_value.fCurValue, param_desc);
-    MV_CC_SetFloatValue(camera_handle_, "Gain", gain);
-    RCLCPP_INFO(this->get_logger(), "Gain: %f", gain);
+    MV_CC_SetFloatValue(camera_handle_, "Gain", gain_);
+    XR_LOG_INFO("Gain: %f", gain_);
   }
 
   rcl_interfaces::msg::SetParametersResult parametersCallback(
@@ -201,6 +191,9 @@ private:
     return result;
   }
 
+  double gain_;
+  double exposure_time_;
+
   sensor_msgs::msg::Image image_msg_;
 
   image_transport::CameraPublisher camera_pub_;
@@ -217,7 +210,5 @@ private:
 
   int fail_conut_ = 0;
   std::thread capture_thread_;
-
-  OnSetParametersCallbackHandle::SharedPtr params_callback_handle_;
 };
 }  // namespace hik_camera

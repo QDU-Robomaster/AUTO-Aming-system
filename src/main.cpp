@@ -45,31 +45,16 @@ int main(int argc, char** argv)
 
 // Camera
 #if 1
-  rclcpp::NodeOptions camera_options;
-
-  // 手动设置相机参数（直接在 C++ 代码中传递）
-  camera_options.parameter_overrides(
-      {{"camera_name", "narrow_stereo"},
-       {"exposure_time", 500},  // 曝光时间（单位：微秒）
-       {"gain", 32.0},          // 增益
-       {"image_width", 1440},   // 图像宽度
-       {"image_height", 1080},  // 图像高度
-       {"camera_matrix",
-        std::vector<double>{2340.46464112537, 0.0, 713.3224120377864, 0.0,
-                            2336.8745144649124, 547.4106752074272, 0.0, 0.0, 1.0}},
-       {"distortion_model", "plumb_bob"},
-       {"distortion_coefficients",
-        std::vector<double>{-0.09558691800515781, 0.3013704144837407,
-                            -0.0008218465102445683, 0.00024582434306615617, 0.0}},
-       {"rectification_matrix",
-        std::vector<double>{1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0}},
-       {"projection_matrix",
-        std::vector<double>{2323.906982421875, 0.0, 712.9446224841959, 0.0, 0.0,
-                            2324.767578125, 546.6426169058832, 0.0, 0.0, 0.0, 1.0,
-                            0.0}}});
-
-  auto hik_camera_node = std::make_shared<hik_camera::HikCameraNode>(camera_options);
-  executor.add_node(hik_camera_node);
+  hik_camera::HikCameraNode camera(
+      "narrow_stereo", 1440, 1080,
+      {{2340.46464112537, 0.0, 713.3224120377864, 0.0, 2336.8745144649124,
+        547.4106752074272, 0.0, 0.0, 1.0}},
+      {{-0.09558691800515781, 0.3013704144837407, -0.0008218465102445683,
+        0.00024582434306615617, 0.0}},
+      {{1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0}},
+      {{2323.906982421875, 0.0, 712.9446224841959, 0.0, 0.0, 2324.767578125,
+        546.6426169058832, 0.0, 0.0, 0.0, 1.0, 0.0}},
+      "plumb_bob", true, 32.0, 500.0);
 #endif
 
   // 运行 ROS 2 节点
