@@ -37,27 +37,26 @@ RMSerialDriver::RMSerialDriver(double timestamp_offset, std::string device_name,
   // INFO打印
   XR_LOG_INFO("Start RMSerialDriver!");
 
-  getParams();  // 传参
+  node_ = new rclcpp::Node("rm_serial_driver");
 
-  auto node = std::make_shared<rclcpp::Node>("hik_camera_node");
-  node_ = node.get();
+  getParams();  // 传参
 
   //* 创建发布者
   // 时间偏移量
   // /joint_states 发布端,用来发布云台
-  joint_state_pub_ = node->create_publisher<sensor_msgs::msg::JointState>(
+  joint_state_pub_ = node_->create_publisher<sensor_msgs::msg::JointState>(
       "/joint_states", rclcpp::QoS(rclcpp::KeepLast(1)));
 
   // 发布当前弹速
-  velocity_pub_ =
-      node->create_publisher<auto_aim_interfaces::msg::Velocity>("/current_velocity", 10);
+  velocity_pub_ = node_->create_publisher<auto_aim_interfaces::msg::Velocity>(
+      "/current_velocity", 10);
 
   // // 检查参数客户端
   detector_param_client_ =
       std::make_shared<rclcpp::AsyncParametersClient>(node_, "armor_detector");
 
   // Tracker重置服务客户端
-  reset_tracker_client_ = node->create_client<std_srvs::srv::Trigger>("/tracker/reset");
+  reset_tracker_client_ = node_->create_client<std_srvs::srv::Trigger>("/tracker/reset");
 
   //! serial_driver 第二部分 串口初始化以及收发
   try
@@ -91,7 +90,7 @@ RMSerialDriver::RMSerialDriver(double timestamp_offset, std::string device_name,
   // "/tracker/receive",  rclcpp::SensorDataQoS());
 
   // Create Subscription
-  send_sub_ = node->create_subscription<auto_aim_interfaces::msg::Send>(
+  send_sub_ = node_->create_subscription<auto_aim_interfaces::msg::Send>(
       "/tracker/send", rclcpp::SensorDataQoS(),
       std::bind(&RMSerialDriver::sendData, this, std::placeholders::_1));
 
