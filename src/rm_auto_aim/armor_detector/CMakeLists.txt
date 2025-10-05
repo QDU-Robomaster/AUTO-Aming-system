@@ -28,13 +28,19 @@ ament_auto_add_library(${PROJECT_NAME} SHARED
   DIRECTORY src
 )
 
-target_include_directories(${PROJECT_NAME} PUBLIC ${OpenCV_INCLUDE_DIRS})
+target_include_directories(${PROJECT_NAME} 
+  PUBLIC ${OpenCV_INCLUDE_DIRS} 
+  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/include/armor_detector/
+)
+
 target_link_libraries(${PROJECT_NAME} ${OpenCV_LIBS})
 
 rclcpp_components_register_node(${PROJECT_NAME}
   PLUGIN rm_auto_aim::ArmorDetectorNode
   EXECUTABLE armor_detector_node
 )
+
+add_compile_definitions(MODEL_PATH="${CMAKE_CURRENT_SOURCE_DIR}/model")
 
 #############
 ## Testing ##
@@ -65,4 +71,16 @@ endif()
 ament_auto_package(
   INSTALL_TO_SHARE
   model
+)
+
+target_include_directories(armor_detector PUBLIC
+  ${CMAKE_BINARY_DIR}/src/rm_auto_aim/auto_aim_interfaces/rosidl_generator_cpp
+)
+
+file(
+  GLOB IF_SOURCES "${CMAKE_BINARY_DIR}/src/rm_auto_aim/auto_aim_interfaces/rosidl_typesupport_cpp/auto_aim_interfaces/msg/*.cpp")
+
+target_sources(
+  armor_detector
+  PRIVATE ${IF_SOURCES}
 )

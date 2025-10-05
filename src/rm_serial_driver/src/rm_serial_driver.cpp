@@ -1,4 +1,4 @@
-#include "rm_serial_driver/rm_serial_driver.hpp"
+#include "rm_serial_driver.hpp"
 
 // ROS
 #include <ostream>
@@ -16,8 +16,8 @@
 #include <vector>
 #include <math.h>
 
-#include "rm_serial_driver/crc.hpp"
-#include "rm_serial_driver/packet.hpp"
+#include "crc.hpp"
+#include "packet.hpp"
 
 // 串口驱动
 namespace rm_serial_driver
@@ -206,7 +206,7 @@ void RMSerialDriver::receiveData()
 }
 
 //! 发送数据 视觉 -> 电控
-void RMSerialDriver::sendData(const auto_aim_interfaces::msg::Send::SharedPtr msg)
+void RMSerialDriver::sendData(const std::shared_ptr<const auto_aim_interfaces::msg::Send> msg)
 {
   // 对齐目标号码
   const static std::map<std::string, uint8_t> id_unit8_map{

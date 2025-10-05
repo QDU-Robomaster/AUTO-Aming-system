@@ -56,3 +56,7 @@ endif()
 #############
 
 ament_auto_package()
+
+target_include_directories(armor_executor PUBLIC
+  ${CMAKE_BINARY_DIR}/src/rm_auto_aim/auto_aim_interfaces/rosidl_generator_cpp
+)

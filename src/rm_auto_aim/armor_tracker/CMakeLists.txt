@@ -56,3 +56,14 @@ endif()
 #############
 
 ament_auto_package()
+
+target_include_directories(armor_tracker PUBLIC
+  ${CMAKE_BINARY_DIR}/src/rm_auto_aim/auto_aim_interfaces/rosidl_generator_cpp
+  ${CMAKE_CURRENT_SOURCE_DIR}/include/armor_tracker
+)
+
+target_link_libraries(
+  armor_tracker
+  armor_executor 
+  armor_detector
+)

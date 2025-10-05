@@ -45,7 +45,7 @@ private:
 
   void receiveData();
 
-  void sendData(const auto_aim_interfaces::msg::Send::SharedPtr msg);
+  void sendData(const std::shared_ptr<const auto_aim_interfaces::msg::Send> msg);
 
   void reopenPort();
 

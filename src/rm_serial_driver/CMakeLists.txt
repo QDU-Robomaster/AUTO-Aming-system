@@ -1,57 +1,48 @@
-cmake_minimum_required(VERSION 3.10)
-project(rm_serial_driver)
+# src/rm_serial_driver/CMakeLists.txt
 
-## Use C++14
-set(CMAKE_CXX_STANDARD 14)
-set(CMAKE_CXX_STANDARD_REQUIRED ON)
-
-## By adding -Wall and -Werror, the compiler does not ignore warnings anymore,
-## enforcing cleaner code.
-add_definitions(-Wall -Werror)
-
-## Export compile commands for clangd
-set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
-
-#######################
-## Find dependencies ##
-#######################
-
-find_package(ament_cmake_auto REQUIRED)
-ament_auto_find_build_dependencies()
-
-###########
-## Build ##
-###########
-
-ament_auto_add_library(${PROJECT_NAME} SHARED
-  src/rm_serial_driver.cpp
-  src/crc.cpp
+# 添加源代码文件
+add_library(rm_serial_driver STATIC
+  ${CMAKE_CURRENT_LIST_DIR}/src/rm_serial_driver.cpp
+  ${CMAKE_CURRENT_LIST_DIR}/src/crc.cpp
 )
 
-rclcpp_components_register_node(${PROJECT_NAME}
-  PLUGIN rm_serial_driver::RMSerialDriver
-  EXECUTABLE ${PROJECT_NAME}_node
+# 链接必要的库
+target_link_libraries(rm_serial_driver
+  PUBLIC ${rclcpp_LIBRARIES}
+  PUBLIC ${rcl_interfaces_LIBRARIES}
+  PUBLIC ${class_loader_LIBRARIES}
+  PUBLIC ${serial_driver_LIBRARIES}
+  PUBLIC ${sensor_msgs_LIBRARIES}
+  PUBLIC ${visualization_msgs_LIBRARIES}
+  PUBLIC ${auto_aim_interfaces_LIBRARIES}
+  PUBLIC ${std_srvs_LIBRARIES}
 )
 
-#############
-## Testing ##
-#############
+# 添加包含目录
+target_include_directories(rm_serial_driver
+  PUBLIC ${rclcpp_INCLUDE_DIRS}
+  PUBLIC ${rcl_interfaces_INCLUDE_DIRS}
+  PUBLIC ${class_loader_INCLUDE_DIRS}
+  PUBLIC ${serial_driver_INCLUDE_DIRS}
+  PUBLIC ${sensor_msgs_INCLUDE_DIRS}
+  PUBLIC ${visualization_msgs_INCLUDE_DIRS}
+  PUBLIC ${auto_aim_interfaces_INCLUDE_DIRS}
+  PUBLIC ${std_srvs_INCLUDE_DIRS}
+  PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/src
+)
 
-if(BUILD_TESTING)
-  find_package(ament_lint_auto REQUIRED)
-  list(APPEND AMENT_LINT_AUTO_EXCLUDE
-    ament_cmake_copyright
-    ament_cmake_uncrustify
-  )
-  ament_lint_auto_find_test_dependencies()
-endif()
+add_dependencies(rm_serial_driver
+  auto_aim_interfaces
+)
 
-#############
-## Install ##
-#############
+file(
+  GLOB IF_SOURCES "${CMAKE_BINARY_DIR}/src/rm_auto_aim/auto_aim_interfaces/rosidl_typesupport_cpp/auto_aim_interfaces/msg/*.cpp")
 
-ament_auto_package(
-  INSTALL_TO_SHARE
-  config
-  launch
+target_sources(
+  rm_serial_driver
+  PRIVATE ${IF_SOURCES}
+)
+
+target_include_directories(rm_serial_driver PUBLIC
+  ${CMAKE_BINARY_DIR}/src/rm_auto_aim/auto_aim_interfaces/rosidl_generator_cpp
 )
