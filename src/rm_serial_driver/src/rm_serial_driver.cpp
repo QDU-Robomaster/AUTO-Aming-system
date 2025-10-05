@@ -53,8 +53,8 @@ RMSerialDriver::RMSerialDriver(double timestamp_offset, std::string device_name,
       node->create_publisher<auto_aim_interfaces::msg::Velocity>("/current_velocity", 10);
 
   // // 检查参数客户端
-  // detector_param_client_ =
-  //     std::make_shared<rclcpp::AsyncParametersClient>(this, "armor_detector");
+  detector_param_client_ =
+      std::make_shared<rclcpp::AsyncParametersClient>(node_, "armor_detector");
 
   // Tracker重置服务客户端
   reset_tracker_client_ = node->create_client<std_srvs::srv::Trigger>("/tracker/reset");
