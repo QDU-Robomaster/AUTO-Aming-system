@@ -3,7 +3,6 @@
 # 添加源代码文件
 add_library(rm_serial_driver STATIC
   ${CMAKE_CURRENT_LIST_DIR}/src/rm_serial_driver.cpp
-  ${CMAKE_CURRENT_LIST_DIR}/src/crc.cpp
 )
 
 # 链接必要的库
@@ -43,6 +42,12 @@ target_sources(
   PRIVATE ${IF_SOURCES}
 )
 
+target_link_libraries(
+    rm_serial_driver
+    PUBLIC xr
+)
+
 target_include_directories(rm_serial_driver PUBLIC
   ${CMAKE_BINARY_DIR}/src/rm_auto_aim/auto_aim_interfaces/rosidl_generator_cpp
+  PUBLIC $<TARGET_PROPERTY:xr,INTERFACE_INCLUDE_DIRECTORIES>
 )

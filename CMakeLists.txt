@@ -21,7 +21,24 @@ find_package(visualization_msgs REQUIRED)
 find_package(std_srvs REQUIRED)
 find_package(rosidl_typesupport_cpp REQUIRED)
 
+# libxr
+add_subdirectory(libxr)
+
 add_executable(${PROJECT_NAME}_node src/main.cpp)
+
+add_dependencies(${PROJECT_NAME}_node xr)
+
+target_link_libraries(
+    ${PROJECT_NAME}_node
+    PUBLIC xr
+)
+
+target_include_directories(
+    ${PROJECT_NAME}_node
+    PUBLIC $<TARGET_PROPERTY:xr,INTERFACE_INCLUDE_DIRECTORIES>
+)
+
+# ros 依赖
 
 target_link_libraries(${PROJECT_NAME}_node
   PUBLIC ${rclcpp_LIBRARIES}
