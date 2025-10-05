@@ -13,6 +13,7 @@
 #include <memory>
 #include <string>
 #include <thread>
+#include <vector>
 
 //一个构造函数和析构函数
 namespace hik_camera
@@ -59,15 +60,33 @@ public:
 
     // Load camera info
     camera_name_ = this->declare_parameter("camera_name", "narrow_stereo");
-    camera_info_manager_ =
-      std::make_unique<camera_info_manager::CameraInfoManager>(this, camera_name_);
-    auto camera_info_url = this->declare_parameter("camera_info_url", "");
-    if (camera_info_manager_->validateURL(camera_info_url)) {
-      camera_info_manager_->loadCameraInfo(camera_info_url);
-      camera_info_msg_ = camera_info_manager_->getCameraInfo();
-    } else {
-      RCLCPP_WARN(this->get_logger(), "Invalid camera info URL: %s", camera_info_url.c_str());
+
+    camera_info_msg_.width = this->declare_parameter("image_width", 1440);
+    camera_info_msg_.height = this->declare_parameter("image_height", 1080);
+    auto camera_matrix = this->declare_parameter(
+      "camera_matrix", std::vector<double>{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
+
+    for (size_t i = 0; i < camera_matrix.size(); i++) {
+      camera_info_msg_.k[i] = camera_matrix[i];
     }
+
+    camera_info_msg_.d = this->declare_parameter(
+      "distortion_coefficients", std::vector<double>{0.0, 0.0, 0.0, 0.0, 0.0});
+
+    auto rectification_matrix = this->declare_parameter(
+      "rectification_matrix", std::vector<double>{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
+    for (size_t i = 0; i < rectification_matrix.size(); i++) {
+      camera_info_msg_.r[i] = rectification_matrix[i];
+    }
+
+    auto projection_matrix = this->declare_parameter(
+      "projection_matrix",
+      std::vector<double>{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0});
+    for (size_t i = 0; i < projection_matrix.size(); i++) {
+      camera_info_msg_.p[i] = projection_matrix[i];
+    }
+
+    camera_info_msg_.distortion_model = this->declare_parameter("distortion_model", "plumb_bob");
 
     params_callback_handle_ = this->add_on_set_parameters_callback(
       std::bind(&HikCameraNode::parametersCallback, this, std::placeholders::_1));
