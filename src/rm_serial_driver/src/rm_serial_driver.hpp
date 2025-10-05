@@ -1,6 +1,7 @@
 #ifndef RM_SERIAL_DRIVER__RM_SERIAL_DRIVER_HPP_
 #define RM_SERIAL_DRIVER__RM_SERIAL_DRIVER_HPP_
 
+#include <rclcpp/node.hpp>
 #include <rclcpp/publisher.hpp>
 #include <rclcpp/rclcpp.hpp>
 #include <rclcpp/subscription.hpp>
@@ -11,33 +12,34 @@
 #include <visualization_msgs/msg/marker.hpp>
 
 // C++ system
+#include <fstream>
 #include <future>
+#include <iomanip>
 #include <memory>
 #include <string>
 #include <thread>
 #include <vector>
-#include <fstream>
-#include <iomanip>
 
-
-#include "auto_aim_interfaces/msg/target.hpp"
-#include "auto_aim_interfaces/msg/send.hpp"
-#include "auto_aim_interfaces/msg/velocity.hpp"
 #include "auto_aim_interfaces/msg/receive.hpp"
+#include "auto_aim_interfaces/msg/send.hpp"
+#include "auto_aim_interfaces/msg/target.hpp"
+#include "auto_aim_interfaces/msg/velocity.hpp"
 
 namespace rm_serial_driver
 {
-class RMSerialDriver : public rclcpp::Node
+class RMSerialDriver
 {
-public:
-  explicit RMSerialDriver(const rclcpp::NodeOptions & options);
+ public:
+  explicit RMSerialDriver(double timestamp_offset, std::string device_name, int baud_rate,
+                          std::string parity);
 
-  ~RMSerialDriver() override;
+  ~RMSerialDriver();
   float pitch_trans(float originAngle);
   float pitch_re_trans(float originAngle);
   float yaw_trans(float originAngle);
   float yaw_re_trans(float originAngle);
-private:
+
+ private:
   // 在 RMSerialDriver 类的头文件中添加成员变量
   std::ofstream csv_file_;
 
@@ -49,7 +51,7 @@ private:
 
   void reopenPort();
 
-  void setParam(const rclcpp::Parameter & param);
+  void setParam(const rclcpp::Parameter& param);
 
   void resetTracker();
 
@@ -58,11 +60,16 @@ private:
   // Serial port
   std::unique_ptr<IoContext> owned_ctx_;
   std::string device_name_;
+  int baud_rate_;
+  std::string parity_;
   std::unique_ptr<drivers::serial_driver::SerialPortConfig> device_config_;
   std::unique_ptr<drivers::serial_driver::SerialDriver> serial_driver_;
 
+  rclcpp::Node* node_;
+
   // Param client to set detect_colr
-  using ResultFuturePtr = std::shared_future<std::vector<rcl_interfaces::msg::SetParametersResult>>;
+  using ResultFuturePtr =
+      std::shared_future<std::vector<rcl_interfaces::msg::SetParametersResult>>;
   bool initial_set_param_ = false;
   uint8_t previous_receive_color_ = 0;
   rclcpp::AsyncParametersClient::SharedPtr detector_param_client_;
@@ -76,7 +83,6 @@ private:
 
   auto_aim_interfaces::msg::Receive::SharedPtr receive_msg_;
 
-
   double timestamp_offset_ = 0;
   rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_state_pub_;
   rclcpp::Publisher<auto_aim_interfaces::msg::Velocity>::SharedPtr velocity_pub_;
@@ -84,11 +90,6 @@ private:
 
   rclcpp::Subscription<auto_aim_interfaces::msg::Target>::SharedPtr target_sub_;
   rclcpp::Subscription<auto_aim_interfaces::msg::Send>::SharedPtr send_sub_;
-
-
-  rclcpp::Publisher<std_msgs::msg::Float64>::SharedPtr latency_pub_;
-  rclcpp::Publisher<visualization_msgs::msg::Marker>::SharedPtr marker_pub_;
-
 
   std::thread receive_thread_;
 };

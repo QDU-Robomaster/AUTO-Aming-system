@@ -24,10 +24,14 @@
 // 串口驱动
 namespace rm_serial_driver
 {
-RMSerialDriver::RMSerialDriver(const rclcpp::NodeOptions& options)
-    : Node("rm_serial_driver", options),
-      owned_ctx_{new IoContext(2)},
-      serial_driver_{new drivers::serial_driver::SerialDriver(*owned_ctx_)}
+RMSerialDriver::RMSerialDriver(double timestamp_offset, std::string device_name,
+                               int baud_rate, std::string parity)
+    : owned_ctx_{new IoContext(2)},
+      device_name_{device_name},
+      baud_rate_{baud_rate},
+      parity_{parity},
+      serial_driver_{new drivers::serial_driver::SerialDriver(*owned_ctx_)},
+      timestamp_offset_(timestamp_offset)
 {
   //! serial_driver  第一部分 参数设置
   // INFO打印
@@ -35,28 +39,25 @@ RMSerialDriver::RMSerialDriver(const rclcpp::NodeOptions& options)
 
   getParams();  // 传参
 
+  auto node = std::make_shared<rclcpp::Node>("hik_camera_node");
+  node_ = node.get();
+
   //* 创建发布者
   // 时间偏移量
-  timestamp_offset_ = this->declare_parameter("timestamp_offset", 0.0);
   // /joint_states 发布端,用来发布云台
-  joint_state_pub_ = this->create_publisher<sensor_msgs::msg::JointState>(
+  joint_state_pub_ = node->create_publisher<sensor_msgs::msg::JointState>(
       "/joint_states", rclcpp::QoS(rclcpp::KeepLast(1)));
-  // 发布延迟
-  latency_pub_ = this->create_publisher<std_msgs::msg::Float64>("/latency", 10);
-  // 发布 marker
-  marker_pub_ =
-      this->create_publisher<visualization_msgs::msg::Marker>("/aiming_point", 10);
 
   // 发布当前弹速
   velocity_pub_ =
-      this->create_publisher<auto_aim_interfaces::msg::Velocity>("/current_velocity", 10);
+      node->create_publisher<auto_aim_interfaces::msg::Velocity>("/current_velocity", 10);
 
-  // 检查参数客户端
-  detector_param_client_ =
-      std::make_shared<rclcpp::AsyncParametersClient>(this, "armor_detector");
+  // // 检查参数客户端
+  // detector_param_client_ =
+  //     std::make_shared<rclcpp::AsyncParametersClient>(this, "armor_detector");
 
   // Tracker重置服务客户端
-  reset_tracker_client_ = this->create_client<std_srvs::srv::Trigger>("/tracker/reset");
+  reset_tracker_client_ = node->create_client<std_srvs::srv::Trigger>("/tracker/reset");
 
   //! serial_driver 第二部分 串口初始化以及收发
   try
@@ -90,7 +91,7 @@ RMSerialDriver::RMSerialDriver(const rclcpp::NodeOptions& options)
   // "/tracker/receive",  rclcpp::SensorDataQoS());
 
   // Create Subscription
-  send_sub_ = this->create_subscription<auto_aim_interfaces::msg::Send>(
+  send_sub_ = node->create_subscription<auto_aim_interfaces::msg::Send>(
       "/tracker/send", rclcpp::SensorDataQoS(),
       std::bind(&RMSerialDriver::sendData, this, std::placeholders::_1));
 
@@ -170,9 +171,8 @@ void RMSerialDriver::receiveData()
 
           //* 发布的 joint_state
           sensor_msgs::msg::JointState joint_state;
-          timestamp_offset_ = this->get_parameter("timestamp_offset").as_double();
           joint_state.header.stamp =
-              this->now() + rclcpp::Duration::from_seconds(timestamp_offset_);
+              node_->now() + rclcpp::Duration::from_seconds(timestamp_offset_);
           joint_state.name.push_back("pitch_joint");
           joint_state.name.push_back("yaw_joint");
 
@@ -185,21 +185,10 @@ void RMSerialDriver::receiveData()
 
           // 速度发布
           auto_aim_interfaces::msg::Velocity current_velocity;
-          timestamp_offset_ = this->get_parameter("timestamp_offset").as_double();
           current_velocity.header.stamp =
-              this->now() + rclcpp::Duration::from_seconds(timestamp_offset_);
+              node_->now() + rclcpp::Duration::from_seconds(timestamp_offset_);
           current_velocity.velocity = packet.current_v;
           velocity_pub_->publish(current_velocity);
-
-          //  aim_point 发布
-          if (abs(packet.aim_x) > 0.01)
-          {
-            aiming_point_.header.stamp = this->now();
-            aiming_point_.pose.position.x = packet.aim_x;
-            aiming_point_.pose.position.y = packet.aim_y;
-            aiming_point_.pose.position.z = packet.aim_z;
-            marker_pub_->publish(aiming_point_);
-          }
         }
         else
         {
@@ -289,9 +278,8 @@ void RMSerialDriver::sendData(
 
     // 延迟
     std_msgs::msg::Float64 latency;
-    latency.data = (this->now() - msg->header.stamp).seconds() * 1000.0;
+    latency.data = (node_->now() - msg->header.stamp).seconds() * 1000.0;
     XR_LOG_DEBUG("Total latency: %fms", latency.data);
-    latency_pub_->publish(latency);
 
     // 错误处理
   }
@@ -309,63 +297,13 @@ void RMSerialDriver::getParams()
   using Parity = drivers::serial_driver::Parity;
   using StopBits = drivers::serial_driver::StopBits;
 
-  uint32_t baud_rate{};
   auto fc = FlowControl::NONE;
   auto pt = Parity::NONE;
   auto sb = StopBits::ONE;
 
   try
   {
-    device_name_ = declare_parameter<std::string>("device_name", "");
-  }
-  catch (rclcpp::ParameterTypeException& ex)
-  {
-    XR_LOG_ERROR("The device name provided was invalid");
-    throw ex;
-  }
-
-  try
-  {
-    baud_rate = declare_parameter<int>("baud_rate", 0);
-  }
-  catch (rclcpp::ParameterTypeException& ex)
-  {
-    XR_LOG_ERROR("The baud_rate provided was invalid");
-    throw ex;
-  }
-
-  try
-  {
-    const auto fc_string = declare_parameter<std::string>("flow_control", "");
-
-    if (fc_string == "none")
-    {
-      fc = FlowControl::NONE;
-    }
-    else if (fc_string == "hardware")
-    {
-      fc = FlowControl::HARDWARE;
-    }
-    else if (fc_string == "software")
-    {
-      fc = FlowControl::SOFTWARE;
-    }
-    else
-    {
-      throw std::invalid_argument{
-          "The flow_control parameter must be one of: "
-          "none, software, or hardware."};
-    }
-  }
-  catch (rclcpp::ParameterTypeException& ex)
-  {
-    XR_LOG_ERROR("The flow_control provided was invalid");
-    throw ex;
-  }
-
-  try
-  {
-    const auto pt_string = declare_parameter<std::string>("parity", "");
+    const auto pt_string = this->parity_;
 
     if (pt_string == "none")
     {
@@ -391,36 +329,8 @@ void RMSerialDriver::getParams()
     throw ex;
   }
 
-  try
-  {
-    const auto sb_string = declare_parameter<std::string>("stop_bits", "");
-
-    if (sb_string == "1" || sb_string == "1.0")
-    {
-      sb = StopBits::ONE;
-    }
-    else if (sb_string == "1.5")
-    {
-      sb = StopBits::ONE_POINT_FIVE;
-    }
-    else if (sb_string == "2" || sb_string == "2.0")
-    {
-      sb = StopBits::TWO;
-    }
-    else
-    {
-      throw std::invalid_argument{
-          "The stop_bits parameter must be one of: 1, 1.5, or 2."};
-    }
-  }
-  catch (rclcpp::ParameterTypeException& ex)
-  {
-    XR_LOG_ERROR("The stop_bits provided was invalid");
-    throw ex;
-  }
-
   device_config_ =
-      std::make_unique<drivers::serial_driver::SerialPortConfig>(baud_rate, fc, pt, sb);
+      std::make_unique<drivers::serial_driver::SerialPortConfig>(baud_rate_, fc, pt, sb);
 }
 
 void RMSerialDriver::reopenPort()
@@ -497,8 +407,7 @@ float RMSerialDriver::pitch_trans(float originAngle)
   {
     originAngle = originAngle + 2 * M_PI;
   }
-  else
-    originAngle = originAngle;
+
   return originAngle;
   // return originAngle;
 }
@@ -506,12 +415,10 @@ float RMSerialDriver::pitch_trans(float originAngle)
 // [0,2PI] -> [-PI,PI] 转换
 float RMSerialDriver::pitch_re_trans(float originAngle)
 {
-  if (originAngle <= M_PI)
+  if (originAngle > M_PI)
   {
-    originAngle = originAngle;
-  }
-  else
     originAngle = originAngle - 2 * M_PI;
+  }
 
   return originAngle;
   // return originAngle-M_PI;
@@ -523,20 +430,17 @@ float RMSerialDriver::yaw_trans(float originAngle)
   {
     originAngle = originAngle + 2 * M_PI;
   }
-  else
-    originAngle = originAngle;
+
   return originAngle;
 
   // [0,2PI] -> [-PI,PI] 转换
 }
 float RMSerialDriver::yaw_re_trans(float originAngle)
 {
-  if (originAngle <= M_PI)
+  if (originAngle > M_PI)
   {
-    originAngle = originAngle;
-  }
-  else
     originAngle = originAngle - 2 * M_PI;
+  }
   return originAngle;
 }
 

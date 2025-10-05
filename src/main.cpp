@@ -32,15 +32,7 @@ int main(int argc, char** argv)
 
 // Serial
 #if 1
-  rclcpp::NodeOptions serial_options;
-  serial_options.parameter_overrides({{"device_name", "/dev/ttyACM0"},
-                                      {"baud_rate", 460800},
-                                      {"flow_control", "none"},
-                                      {"parity", "none"},
-                                      {"stop_bits", "1"}});
-  auto serial_driver_node =
-      std::make_shared<rm_serial_driver::RMSerialDriver>(serial_options);
-  executor.add_node(serial_driver_node);
+  rm_serial_driver::RMSerialDriver serial_driver(0.0, "/dev/ttyACM0", 460800, "none");
 #endif
 
 // Camera
