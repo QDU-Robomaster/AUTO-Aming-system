@@ -236,10 +236,9 @@ std::vector<Armor> ArmorDetectorNode::detectArmors(
   auto img = cv_bridge::toCvShare(img_msg, "rgb8")->image;
 
   // Update params
-  detector_->binary_thres = node_->get_parameter("binary_thres").as_int();
-  detector_->detect_color = node_->get_parameter("detect_color").as_int();
-  detector_->classifier->threshold =
-      node_->get_parameter("classifier_threshold").as_double();
+  detector_->binary_thres = binary_thres_;
+  detector_->detect_color = detect_color_;
+  detector_->classifier->threshold = classifier_threshold_;
 
   auto armors = detector_->detect(img);
 

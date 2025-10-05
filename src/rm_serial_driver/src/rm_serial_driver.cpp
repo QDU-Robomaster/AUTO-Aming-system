@@ -356,8 +356,9 @@ void RMSerialDriver::reopenPort()
   }
 }
 
-void RMSerialDriver::setParam(const rclcpp::Parameter& param)
+void RMSerialDriver::setParam(const rclcpp::Parameter&)
 {
+  XR_LOG_DEBUG("Setting parameter");
   // TODO：设置颜色
 }
 
