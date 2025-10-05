@@ -358,32 +358,7 @@ void RMSerialDriver::reopenPort()
 
 void RMSerialDriver::setParam(const rclcpp::Parameter& param)
 {
-  if (!detector_param_client_->service_is_ready())
-  {
-    XR_LOG_WARN("Service not ready, skipping parameter set");
-    return;
-  }
-
-  if (!set_param_future_.valid() ||
-      set_param_future_.wait_for(std::chrono::seconds(0)) == std::future_status::ready)
-  {
-    XR_LOG_INFO("Setting detect_color to %ld...", param.as_int());
-    set_param_future_ = detector_param_client_->set_parameters(
-        {param},
-        [this, param](const ResultFuturePtr& results)
-        {
-          for (const auto& result : results.get())
-          {
-            if (!result.successful)
-            {
-              XR_LOG_ERROR("Failed to set parameter: %s", result.reason.c_str());
-              return;
-            }
-          }
-          XR_LOG_INFO("Successfully set detect_color to %ld!", param.as_int());
-          initial_set_param_ = true;
-        });
-  }
+  // TODO：设置颜色
 }
 
 void RMSerialDriver::resetTracker()
