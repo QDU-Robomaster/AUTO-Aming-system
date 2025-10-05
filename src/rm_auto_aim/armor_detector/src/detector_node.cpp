@@ -21,6 +21,7 @@
 #include "armor_detector/armor.hpp"
 #include "armor_detector/detector_node.hpp"
 #include "libxr.hpp"
+#include "logger.hpp"
 
 namespace rm_auto_aim
 {

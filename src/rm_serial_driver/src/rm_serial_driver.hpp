@@ -33,6 +33,8 @@ class RMSerialDriver
   explicit RMSerialDriver(double timestamp_offset, std::string device_name, int baud_rate,
                           std::string parity);
 
+  rclcpp::Node* node_;
+
   ~RMSerialDriver();
   float pitch_trans(float originAngle);
   float pitch_re_trans(float originAngle);
@@ -64,8 +66,6 @@ class RMSerialDriver
   std::string parity_;
   std::unique_ptr<drivers::serial_driver::SerialPortConfig> device_config_;
   std::unique_ptr<drivers::serial_driver::SerialDriver> serial_driver_;
-
-  rclcpp::Node* node_;
 
   // Param client to set detect_colr
   using ResultFuturePtr =

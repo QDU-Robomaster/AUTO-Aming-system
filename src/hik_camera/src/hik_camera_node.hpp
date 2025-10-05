@@ -3,6 +3,7 @@
 #include <camera_info_manager/camera_info_manager.hpp>
 #include <image_transport/image_transport.hpp>
 #include <rclcpp/logging.hpp>
+#include <rclcpp/node.hpp>
 #include <sensor_msgs/msg/camera_info.hpp>
 #include <sensor_msgs/msg/image.hpp>
 
@@ -61,6 +62,7 @@ public:
 
     // 创建 rclcpp::Node 实例
     auto node = std::make_shared<rclcpp::Node>("hik_camera_node");
+    node_ = node.get();
 
     // 使用该节点实例来创建 CameraPublisher
     auto qos = use_sensor_data_qos ? rmw_qos_profile_sensor_data : rmw_qos_profile_default;
@@ -140,6 +142,8 @@ public:
     }
     XR_LOG_INFO("HikCameraNode destroyed!");
   }
+
+  rclcpp::Node * node_;
 
 private:
   void declareParameters()

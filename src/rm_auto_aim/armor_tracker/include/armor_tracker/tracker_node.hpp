@@ -43,6 +43,8 @@ class ArmorTrackerNode
       double ekf_r_xyz_factor = 0.05, double ekf_r_yaw = 0.02,
       std::string target_frame = "odom");
 
+  rclcpp::Node* node_;
+
  private:
   void velocityCallback(const auto_aim_interfaces::msg::Velocity::SharedPtr velocity_msg);
 
@@ -56,8 +58,6 @@ class ArmorTrackerNode
   // The time when the last message was received
   rclcpp::Time last_time_;
   double dt_;
-
-  rclcpp::Node* node_;
 
   // Armor tracker
   double s2qxyz_, s2qyaw_, s2qr_;

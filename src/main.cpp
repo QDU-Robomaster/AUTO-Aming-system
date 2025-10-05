@@ -1,3 +1,5 @@
+#include <memory>
+#include <rclcpp/node.hpp>
 #include <rclcpp/rclcpp.hpp>
 
 #include "detector_node.hpp"
@@ -52,9 +54,13 @@ int main(int argc, char** argv)
                                                    "gimbal_odom"  // target_frame
   );
 
+  executor.add_node(std::shared_ptr<rclcpp::Node>(armor_detector_node.node_));
+  executor.add_node(std::shared_ptr<rclcpp::Node>(armor_tracker_node.node_));
+
 // Serial
 #if 1
   rm_serial_driver::RMSerialDriver serial_driver(0.0, "/dev/ttyUSB0", 460800, "none");
+  executor.add_node(std::shared_ptr<rclcpp::Node>(serial_driver.node_));
 #endif
 
 // Camera
@@ -69,6 +75,7 @@ int main(int argc, char** argv)
       {{2323.906982421875, 0.0, 712.9446224841959, 0.0, 0.0, 2324.767578125,
         546.6426169058832, 0.0, 0.0, 0.0, 1.0, 0.0}},
       "plumb_bob", true, 32.0, 500.0);
+  executor.add_node(std::shared_ptr<rclcpp::Node>(camera.node_));
 #endif
 
   // 运行 ROS 2 节点
