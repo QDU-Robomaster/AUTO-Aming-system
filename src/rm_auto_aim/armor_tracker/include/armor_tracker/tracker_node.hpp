@@ -18,29 +18,37 @@
 #include <string>
 #include <vector>
 
+#include "armor_executor/SolveTrajectory.hpp"
 #include "armor_tracker/tracker.hpp"
 #include "auto_aim_interfaces/msg/armors.hpp"
-#include "auto_aim_interfaces/msg/target.hpp"
 #include "auto_aim_interfaces/msg/send.hpp"
-#include "auto_aim_interfaces/msg/velocity.hpp"
+#include "auto_aim_interfaces/msg/target.hpp"
 #include "auto_aim_interfaces/msg/tracker_info.hpp"
-#include "armor_executor/SolveTrajectory.hpp"
+#include "auto_aim_interfaces/msg/velocity.hpp"
 
 namespace rm_auto_aim
 {
 using armors_tf2_filter = tf2_ros::MessageFilter<auto_aim_interfaces::msg::Armors>;
 using velocity_tf2_filter = tf2_ros::MessageFilter<auto_aim_interfaces::msg::Velocity>;
-class ArmorTrackerNode : public rclcpp::Node
+class ArmorTrackerNode
 {
-public:
-  explicit ArmorTrackerNode(const rclcpp::NodeOptions & options);
+ public:
+  explicit ArmorTrackerNode(
+      double max_armor_distance = 10.0, double tracker_max_match_distance = 0.15,
+      double tracker_max_match_yaw_diff = 1.0, int tracker_tracking_thres = 5,
+      double tracker_lost_time_thres = 0.3, double tracker_k = 0.092,
+      int tracker_bias_time = 100, double tracker_s_bias = 0.19133,
+      double tracker_z_bias = 0.21265, double ekf_sigma2_q_xyz = 20.0,
+      double ekf_sigma2_q_yaw = 100.0, double ekf_sigma2_q_r = 800,
+      double ekf_r_xyz_factor = 0.05, double ekf_r_yaw = 0.02,
+      std::string target_frame = "odom");
 
-private:
+ private:
   void velocityCallback(const auto_aim_interfaces::msg::Velocity::SharedPtr velocity_msg);
 
   void armorsCallback(const auto_aim_interfaces::msg::Armors::SharedPtr armors_ptr);
 
-  void publishMarkers(const auto_aim_interfaces::msg::Target & target_msg);
+  void publishMarkers(const auto_aim_interfaces::msg::Target& target_msg);
 
   // Maximum allowable armor distance in the XOY plane
   double max_armor_distance_;
@@ -48,6 +56,8 @@ private:
   // The time when the last message was received
   rclcpp::Time last_time_;
   double dt_;
+
+  rclcpp::Node* node_;
 
   // Armor tracker
   double s2qxyz_, s2qyaw_, s2qr_;

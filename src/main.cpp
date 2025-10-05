@@ -17,22 +17,44 @@ int main(int argc, char** argv)
   rclcpp::executors::MultiThreadedExecutor executor;
 
   // Detector
-  rclcpp::NodeOptions detector_options;
-
-  auto detector_node = std::make_shared<rm_auto_aim::ArmorDetectorNode>(detector_options);
-
-  executor.add_node(detector_node);
+  rm_auto_aim::ArmorDetectorNode armor_detector_node(
+      true,         // debug
+      1,            // detect_color
+      85,           // binary_thres
+      0.1,          // light_min_ratio
+      0.4,          // light_max_ratio
+      40.0,         // light_max_angle
+      0.7,          // armor_min_light_ratio
+      0.8,          // armor_min_small_center_distance
+      3.2,          // armor_max_small_center_distance
+      3.2,          // armor_min_large_center_distance
+      5.5,          // armor_max_large_center_distance
+      35.0,         // armor_max_angle
+      0.6,          // classifier_threshold
+      {"negative"}  // ignore_classes
+  );
 
   // Tracker
-  rclcpp::NodeOptions tracker_options;
-
-  auto tracker_node = std::make_shared<rm_auto_aim::ArmorTrackerNode>(tracker_options);
-
-  executor.add_node(tracker_node);
+  rm_auto_aim::ArmorTrackerNode armor_tracker_node(10.0,     // max_armor_distance
+                                                   0.5,      // tracker_max_match_distance
+                                                   1.0,      // tracker_max_match_yaw_diff
+                                                   5,        // tracker_tracking_thres
+                                                   1.0,      // tracker_lost_time_thres
+                                                   0.038,    // tracker_k
+                                                   10,       // tracker_bias_time
+                                                   0.18375,  // tracker_s_bias
+                                                   0.0,      // tracker_z_bias
+                                                   0.05,     // ekf_sigma2_q_xyz
+                                                   5.0,      // ekf_sigma2_q_yaw
+                                                   80.0,     // ekf_sigma2_q_r
+                                                   0.00025,  // ekf_r_xyz_factor
+                                                   0.005,    // ekf_r_yaw
+                                                   "gimbal_odom"  // target_frame
+  );
 
 // Serial
 #if 1
-  rm_serial_driver::RMSerialDriver serial_driver(0.0, "/dev/ttyACM0", 460800, "none");
+  rm_serial_driver::RMSerialDriver serial_driver(0.0, "/dev/ttyUSB0", 460800, "none");
 #endif
 
 // Camera

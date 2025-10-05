@@ -24,16 +24,39 @@
 
 namespace rm_auto_aim
 {
-ArmorDetectorNode::ArmorDetectorNode(const rclcpp::NodeOptions& options)
-    : Node("armor_detector", options)
+ArmorDetectorNode::ArmorDetectorNode(bool debug, int detect_color, int binary_thr,
+                                     double light_min_ratio, double light_max_ratio,
+                                     double light_max_angle, double armor_min_light_ratio,
+                                     double armor_min_small_center_distance,
+                                     double armor_max_small_center_distance,
+                                     double armor_min_large_center_distance,
+                                     double armor_max_large_center_distance,
+                                     double armor_max_angle, double classifier_threshold,
+                                     std::vector<std::string> ignore_classes)
+    : binary_thres_(binary_thr),
+      detect_color_(detect_color),
+      light_min_ratio_(light_min_ratio),
+      light_max_ratio_(light_max_ratio),
+      light_max_angle_(light_max_angle),
+      armor_min_light_ratio_(armor_min_light_ratio),
+      armor_min_small_center_distance_(armor_min_small_center_distance),
+      armor_max_small_center_distance_(armor_max_small_center_distance),
+      armor_min_large_center_distance_(armor_min_large_center_distance),
+      armor_max_large_center_distance_(armor_max_large_center_distance),
+      armor_max_angle_(armor_max_angle),
+      classifier_threshold_(classifier_threshold),
+      ignore_classes_(ignore_classes),
+      debug_(debug)
 {
   XR_LOG_INFO("Starting DetectorNode!");
 
   // Detector
   detector_ = initDetector();
 
+  node_ = new rclcpp::Node("armor_detector");
+
   // Armors Publisher
-  armors_pub_ = this->create_publisher<auto_aim_interfaces::msg::Armors>(
+  armors_pub_ = node_->create_publisher<auto_aim_interfaces::msg::Armors>(
       "/detector/armors", rclcpp::SensorDataQoS());
 
   // Visualization Marker Publisher
@@ -58,18 +81,17 @@ ArmorDetectorNode::ArmorDetectorNode(const rclcpp::NodeOptions& options)
   text_marker_.color.b = 1.0;
   text_marker_.lifetime = rclcpp::Duration::from_seconds(0.1);
 
-  marker_pub_ = this->create_publisher<visualization_msgs::msg::MarkerArray>(
+  marker_pub_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>(
       "/detector/marker", 10);
 
   // Debug Publishers
-  debug_ = this->declare_parameter("debug", false);
   if (debug_)
   {
     createDebugPublishers();
   }
 
   // Debug param change moniter
-  debug_param_sub_ = std::make_shared<rclcpp::ParameterEventHandler>(this);
+  debug_param_sub_ = std::make_shared<rclcpp::ParameterEventHandler>(node_);
   debug_cb_handle_ = debug_param_sub_->add_parameter_callback(
       "debug",
       [this](const rclcpp::Parameter& p)
@@ -78,7 +100,7 @@ ArmorDetectorNode::ArmorDetectorNode(const rclcpp::NodeOptions& options)
         debug_ ? createDebugPublishers() : destroyDebugPublishers();
       });
 
-  cam_info_sub_ = this->create_subscription<sensor_msgs::msg::CameraInfo>(
+  cam_info_sub_ = node_->create_subscription<sensor_msgs::msg::CameraInfo>(
       "/camera_info", rclcpp::SensorDataQoS(),
       [this](sensor_msgs::msg::CameraInfo::ConstSharedPtr camera_info)
       {
@@ -88,7 +110,7 @@ ArmorDetectorNode::ArmorDetectorNode(const rclcpp::NodeOptions& options)
         cam_info_sub_.reset();
       });
 
-  img_sub_ = this->create_subscription<sensor_msgs::msg::Image>(
+  img_sub_ = node_->create_subscription<sensor_msgs::msg::Image>(
       "/image_raw", rclcpp::SensorDataQoS(),
       std::bind(&ArmorDetectorNode::imageCallback, this, std::placeholders::_1));
 }
@@ -172,29 +194,24 @@ std::unique_ptr<Detector> ArmorDetectorNode::initDetector()
   param_desc.integer_range[0].step = 1;
   param_desc.integer_range[0].from_value = 0;
   param_desc.integer_range[0].to_value = 255;
-  int binary_thres = declare_parameter("binary_thres", 160, param_desc);
+  int binary_thres = binary_thres_;
 
   param_desc.description = "0-RED, 1-BLUE";
   param_desc.integer_range[0].from_value = 0;
   param_desc.integer_range[0].to_value = 1;
-  auto detect_color = declare_parameter("detect_color", RED, param_desc);
+  auto detect_color = detect_color_;
 
-  Detector::LightParams l_params = {
-      .min_ratio = declare_parameter("light.min_ratio", 0.1),
-      .max_ratio = declare_parameter("light.max_ratio", 0.4),
-      .max_angle = declare_parameter("light.max_angle", 40.0)};
+  Detector::LightParams l_params = {.min_ratio = light_min_ratio_,
+                                    .max_ratio = light_max_ratio_,
+                                    .max_angle = light_max_angle_};
 
   Detector::ArmorParams a_params = {
-      .min_light_ratio = declare_parameter("armor.min_light_ratio", 0.7),
-      .min_small_center_distance =
-          declare_parameter("armor.min_small_center_distance", 0.8),
-      .max_small_center_distance =
-          declare_parameter("armor.max_small_center_distance", 3.2),
-      .min_large_center_distance =
-          declare_parameter("armor.min_large_center_distance", 3.2),
-      .max_large_center_distance =
-          declare_parameter("armor.max_large_center_distance", 5.5),
-      .max_angle = declare_parameter("armor.max_angle", 35.0)};
+      .min_light_ratio = armor_min_light_ratio_,
+      .min_small_center_distance = armor_min_small_center_distance_,
+      .max_small_center_distance = armor_max_small_center_distance_,
+      .min_large_center_distance = armor_min_large_center_distance_,
+      .max_large_center_distance = armor_max_large_center_distance_,
+      .max_angle = armor_max_angle_};
 
   auto detector =
       std::make_unique<Detector>(binary_thres, detect_color, l_params, a_params);
@@ -203,9 +220,8 @@ std::unique_ptr<Detector> ArmorDetectorNode::initDetector()
   std::string pkg_path = MODEL_PATH;
   auto model_path = pkg_path + "/mlp.onnx";
   auto label_path = pkg_path + "/label.txt";
-  double threshold = this->declare_parameter("classifier_threshold", 0.7);
-  std::vector<std::string> ignore_classes =
-      this->declare_parameter("ignore_classes", std::vector<std::string>{"negative"});
+  double threshold = classifier_threshold_;
+  std::vector<std::string> ignore_classes = ignore_classes_;
   detector->classifier = std::make_unique<NumberClassifier>(model_path, label_path,
                                                             threshold, ignore_classes);
 
@@ -219,13 +235,14 @@ std::vector<Armor> ArmorDetectorNode::detectArmors(
   auto img = cv_bridge::toCvShare(img_msg, "rgb8")->image;
 
   // Update params
-  detector_->binary_thres = get_parameter("binary_thres").as_int();
-  detector_->detect_color = get_parameter("detect_color").as_int();
-  detector_->classifier->threshold = get_parameter("classifier_threshold").as_double();
+  detector_->binary_thres = node_->get_parameter("binary_thres").as_int();
+  detector_->detect_color = node_->get_parameter("detect_color").as_int();
+  detector_->classifier->threshold =
+      node_->get_parameter("classifier_threshold").as_double();
 
   auto armors = detector_->detect(img);
 
-  auto final_time = this->now();
+  auto final_time = node_->now();
   auto latency = (final_time - img_msg->header.stamp).seconds() * 1000;
   XR_LOG_DEBUG("Latency: %fms", latency);
 
@@ -269,14 +286,14 @@ std::vector<Armor> ArmorDetectorNode::detectArmors(
 
 void ArmorDetectorNode::createDebugPublishers()
 {
-  lights_data_pub_ = this->create_publisher<auto_aim_interfaces::msg::DebugLights>(
+  lights_data_pub_ = node_->create_publisher<auto_aim_interfaces::msg::DebugLights>(
       "/detector/debug_lights", 10);
-  armors_data_pub_ = this->create_publisher<auto_aim_interfaces::msg::DebugArmors>(
+  armors_data_pub_ = node_->create_publisher<auto_aim_interfaces::msg::DebugArmors>(
       "/detector/debug_armors", 10);
 
-  binary_img_pub_ = image_transport::create_publisher(this, "/detector/binary_img");
-  number_img_pub_ = image_transport::create_publisher(this, "/detector/number_img");
-  result_img_pub_ = image_transport::create_publisher(this, "/detector/result_img");
+  binary_img_pub_ = image_transport::create_publisher(node_, "/detector/binary_img");
+  number_img_pub_ = image_transport::create_publisher(node_, "/detector/number_img");
+  result_img_pub_ = image_transport::create_publisher(node_, "/detector/result_img");
 }
 
 void ArmorDetectorNode::destroyDebugPublishers()

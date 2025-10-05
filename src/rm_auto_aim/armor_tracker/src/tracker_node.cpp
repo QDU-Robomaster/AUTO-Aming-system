@@ -7,25 +7,36 @@
 
 namespace rm_auto_aim
 {
-ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions& options)
-    : Node("armor_tracker", options)
+ArmorTrackerNode::ArmorTrackerNode(
+    double max_armor_distance, double tracker_max_match_distance,
+    double tracker_max_match_yaw_diff, int tracker_tracking_thres,
+    double tracker_lost_time_thres, double tracker_k, int tracker_bias_time,
+    double tracker_s_bias, double tracker_z_bias, double ekf_sigma2_q_xyz,
+    double ekf_sigma2_q_yaw, double ekf_sigma2_q_r, double ekf_r_xyz_factor,
+    double ekf_r_yaw, std::string target_frame)
+    : max_armor_distance_(max_armor_distance),
+      s2qxyz_(ekf_sigma2_q_xyz),
+      s2qyaw_(ekf_sigma2_q_yaw),
+      s2qr_(ekf_sigma2_q_r),
+      r_xyz_factor(ekf_r_xyz_factor),
+      r_yaw(ekf_r_yaw),
+      lost_time_thres_(tracker_lost_time_thres),
+      target_frame_(target_frame)
 {
   XR_LOG_INFO("Starting TrackerNode!");
 
-  // Maximum allowable armor distance in the XOY plane
-  max_armor_distance_ = this->declare_parameter("max_armor_distance", 10.0);
+  node_ = new rclcpp::Node("armor_tracker");
 
   // Tracker
-  double max_match_distance = this->declare_parameter("tracker.max_match_distance", 0.15);
-  double max_match_yaw_diff = this->declare_parameter("tracker.max_match_yaw_diff", 1.0);
+  double max_match_distance = tracker_max_match_distance;
+  double max_match_yaw_diff = tracker_max_match_yaw_diff;
   tracker_ = std::make_unique<Tracker>(max_match_distance, max_match_yaw_diff);
-  tracker_->tracking_thres = this->declare_parameter("tracker.tracking_thres", 5);
-  lost_time_thres_ = this->declare_parameter("tracker.lost_time_thres", 0.3);
+  tracker_->tracking_thres = tracker_tracking_thres;
 
-  float k = this->declare_parameter("tracker.k", 0.092);
-  int bias_time = this->declare_parameter("tracker.bias_time", 100);
-  float s_bias = this->declare_parameter("tracker.s_bias", 0.19133);
-  float z_bias = this->declare_parameter("tracker.z_bias", 0.21265);
+  double k = tracker_k;
+  int bias_time = tracker_bias_time;
+  double s_bias = tracker_s_bias;
+  double z_bias = tracker_z_bias;
   gaf_solver = std::make_unique<SolveTrajectory>(k, bias_time, s_bias, z_bias);
 
   // EKF
@@ -78,10 +89,6 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions& options)
     // clang-format on
     return h;
   };
-  // update_Q - process noise covariance matrix 过程噪声协方差矩阵
-  s2qxyz_ = declare_parameter("ekf.sigma2_q_xyz", 20.0);
-  s2qyaw_ = declare_parameter("ekf.sigma2_q_yaw", 100.0);
-  s2qr_ = declare_parameter("ekf.sigma2_q_r", 800.0);
   auto u_q = [this]()
   {
     Eigen::MatrixXd q(9, 9);
@@ -103,9 +110,7 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions& options)
     // clang-format on
     return q;
   };
-  // update_R - measurement noise covariance matrix 观测噪声协方差矩阵
-  r_xyz_factor = declare_parameter("ekf.r_xyz_factor", 0.05);
-  r_yaw = declare_parameter("ekf.r_yaw", 0.02);
+
   auto u_r = [this](const Eigen::VectorXd& z)
   {
     Eigen::DiagonalMatrix<double, 4> r;
@@ -122,7 +127,7 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions& options)
   using std::placeholders::_1;
   using std::placeholders::_2;
   using std::placeholders::_3;
-  reset_tracker_srv_ = this->create_service<std_srvs::srv::Trigger>(
+  reset_tracker_srv_ = node_->create_service<std_srvs::srv::Trigger>(
       "/tracker/reset",
       [this](const std_srvs::srv::Trigger::Request::SharedPtr,
              std_srvs::srv::Trigger::Response::SharedPtr response)
@@ -135,37 +140,37 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions& options)
 
   // Subscriber with tf2 message_filter
   // tf2 relevant
-  tf2_buffer_ = std::make_shared<tf2_ros::Buffer>(this->get_clock());
+  tf2_buffer_ = std::make_shared<tf2_ros::Buffer>(node_->get_clock());
   // Create the timer interface before call to waitForTransform,
   // to avoid a tf2_ros::CreateTimerInterfaceException exception
   auto timer_interface = std::make_shared<tf2_ros::CreateTimerROS>(
-      this->get_node_base_interface(), this->get_node_timers_interface());
+      node_->get_node_base_interface(), node_->get_node_timers_interface());
   tf2_buffer_->setCreateTimerInterface(timer_interface);
   tf2_listener_ = std::make_shared<tf2_ros::TransformListener>(*tf2_buffer_);
   // subscriber and filter
-  armors_sub_.subscribe(this, "/detector/armors", rmw_qos_profile_sensor_data);
-  target_frame_ = this->declare_parameter("target_frame", "odom");
+  armors_sub_.subscribe(node_, "/detector/armors", rmw_qos_profile_sensor_data);
+
   armors_filter_ = std::make_shared<armors_tf2_filter>(
-      armors_sub_, *tf2_buffer_, target_frame_, 10, this->get_node_logging_interface(),
-      this->get_node_clock_interface(), std::chrono::duration<int>(1));
+      armors_sub_, *tf2_buffer_, target_frame_, 10, node_->get_node_logging_interface(),
+      node_->get_node_clock_interface(), std::chrono::duration<int>(1));
 
   // Register a callback with tf2_ros::MessageFilter to be called when transforms are
   // available
   armors_filter_->registerCallback(&ArmorTrackerNode::armorsCallback, this);
 
-  velocity_sub_ = this->create_subscription<auto_aim_interfaces::msg::Velocity>(
+  velocity_sub_ = node_->create_subscription<auto_aim_interfaces::msg::Velocity>(
       "/current_velocity",
       rclcpp::QoS(rclcpp::QoSInitialization::from_rmw(rmw_qos_profile_sensor_data)),
       std::bind(&ArmorTrackerNode::velocityCallback, this, std::placeholders::_1));
   // Measurement publisher (for debug usage)
   info_pub_ =
-      this->create_publisher<auto_aim_interfaces::msg::TrackerInfo>("/tracker/info", 10);
+      node_->create_publisher<auto_aim_interfaces::msg::TrackerInfo>("/tracker/info", 10);
 
   // Publisher
-  target_pub_ = this->create_publisher<auto_aim_interfaces::msg::Target>(
+  target_pub_ = node_->create_publisher<auto_aim_interfaces::msg::Target>(
       "/tracker/target", rclcpp::SensorDataQoS());
 
-  send_pub_ = this->create_publisher<auto_aim_interfaces::msg::Send>(
+  send_pub_ = node_->create_publisher<auto_aim_interfaces::msg::Send>(
       "/tracker/send", rclcpp::SensorDataQoS());
 
   // Visualization Marker Publisher
@@ -195,8 +200,8 @@ ArmorTrackerNode::ArmorTrackerNode(const rclcpp::NodeOptions& options)
   armor_marker_.scale.z = 0.125;
   armor_marker_.color.a = 1.0;
   armor_marker_.color.r = 1.0;
-  marker_pub_ =
-      this->create_publisher<visualization_msgs::msg::MarkerArray>("/tracker/marker", 10);
+  marker_pub_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>(
+      "/tracker/marker", 10);
 }
 
 void ArmorTrackerNode::velocityCallback(
