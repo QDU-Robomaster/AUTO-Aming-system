@@ -6,17 +6,43 @@
 #include "hik_camera_node.hpp"
 #include "libxr.hpp"
 #include "libxr_system.hpp"
+#include "ramfs.hpp"
 #include "rm_serial_driver.hpp"
+#include "terminal.hpp"
+#include "thread.hpp"
 #include "tracker_node.hpp"
 
 int main(int argc, char** argv)
 {
   LibXR::PlatformInit();
 
+  LibXR::RamFS ramfs;
+
+  LibXR::Terminal<1024, 64, 16, 128> terminal(ramfs);
+
+  LibXR::Thread term_thread;
+  term_thread.Create(&terminal, LibXR::Terminal<1024, 64, 16, 128>::ThreadFun, "terminal",
+                     512, LibXR::Thread::Priority::MEDIUM);
+
   // 初始化 ROS 2 节点
   rclcpp::init(argc, argv);
 
   rclcpp::executors::MultiThreadedExecutor executor;
+
+  // Camera
+#if 1
+  hik_camera::HikCameraNode camera(
+      "narrow_stereo", 1440, 1080,
+      {{2340.46464112537, 0.0, 713.3224120377864, 0.0, 2336.8745144649124,
+        547.4106752074272, 0.0, 0.0, 1.0}},
+      {{-0.09558691800515781, 0.3013704144837407, -0.0008218465102445683,
+        0.00024582434306615617, 0.0}},
+      {{1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0}},
+      {{2323.906982421875, 0.0, 712.9446224841959, 0.0, 0.0, 2324.767578125,
+        546.6426169058832, 0.0, 0.0, 0.0, 1.0, 0.0}},
+      "plumb_bob", true, 32.0, 500.0);
+  executor.add_node(camera.node_);
+#endif
 
   // Detector
   rm_auto_aim::ArmorDetectorNode armor_detector_node(
@@ -63,25 +89,14 @@ int main(int argc, char** argv)
   executor.add_node(serial_driver.node_);
 #endif
 
-// Camera
-#if 1
-  hik_camera::HikCameraNode camera(
-      "narrow_stereo", 1440, 1080,
-      {{2340.46464112537, 0.0, 713.3224120377864, 0.0, 2336.8745144649124,
-        547.4106752074272, 0.0, 0.0, 1.0}},
-      {{-0.09558691800515781, 0.3013704144837407, -0.0008218465102445683,
-        0.00024582434306615617, 0.0}},
-      {{1.0, 0.0, 0.0, 0.0, 1.0, 0.0, 0.0, 0.0, 1.0}},
-      {{2323.906982421875, 0.0, 712.9446224841959, 0.0, 0.0, 2324.767578125,
-        546.6426169058832, 0.0, 0.0, 0.0, 1.0, 0.0}},
-      "plumb_bob", true, 32.0, 500.0);
-  executor.add_node(camera.node_);
-#endif
-
   // 运行 ROS 2 节点
   executor.spin();
 
   // 关闭 ROS 2
   rclcpp::shutdown();
+  while (1)
+  {
+    LibXR::Thread::Sleep(1000);
+  }
   return 0;
 }
