@@ -20,8 +20,10 @@
 
 #include "armor_detector/armor.hpp"
 #include "armor_detector/detector_node.hpp"
+#include "detector.hpp"
 #include "libxr.hpp"
 #include "logger.hpp"
+#include "message.hpp"
 
 namespace rm_auto_aim
 {
@@ -101,25 +103,45 @@ ArmorDetectorNode::ArmorDetectorNode(bool debug, int detect_color, int binary_th
         debug_ ? createDebugPublishers() : destroyDebugPublishers();
       });
 
-  cam_info_sub_ = node_->create_subscription<sensor_msgs::msg::CameraInfo>(
-      "/camera_info", rclcpp::SensorDataQoS(),
-      [this](sensor_msgs::msg::CameraInfo::ConstSharedPtr camera_info)
+  auto info_topic = LibXR::Topic(LibXR::Topic::Find("/camera_info"));
+  auto info_cb = LibXR::Topic::Callback::Create(
+      [](bool, ArmorDetectorNode* detector_node, LibXR::RawData& data)
       {
-        cam_center_ = cv::Point2f(camera_info->k[2], camera_info->k[5]);
-        cam_info_ = std::make_shared<sensor_msgs::msg::CameraInfo>(*camera_info);
-        pnp_solver_ = std::make_unique<PnPSolver>(camera_info->k, camera_info->d);
-        cam_info_sub_.reset();
-      });
+        sensor_msgs::msg::CameraInfo* camera_info =
+            reinterpret_cast<sensor_msgs::msg::CameraInfo*>(data.addr_);
 
-  img_sub_ = node_->create_subscription<sensor_msgs::msg::Image>(
-      "/image_raw", rclcpp::SensorDataQoS(),
-      std::bind(&ArmorDetectorNode::imageCallback, this, std::placeholders::_1));
+        static bool inited = false;
+        if (!inited)
+        {
+          inited = true;
+
+          detector_node->cam_center_ = cv::Point2f(camera_info->k[2], camera_info->k[5]);
+          detector_node->cam_info_ =
+              std::make_shared<sensor_msgs::msg::CameraInfo>(*camera_info);
+          detector_node->pnp_solver_ =
+              std::make_unique<PnPSolver>(camera_info->k, camera_info->d);
+        }
+      },
+      this);
+
+  info_topic.RegisterCallback(info_cb);
+
+  auto img_topic = LibXR::Topic(LibXR::Topic::Find("/image_raw"));
+  auto img_cb = LibXR::Topic::Callback::Create(
+      [](bool, ArmorDetectorNode* detector_node, LibXR::RawData& data)
+      {
+        sensor_msgs::msg::Image* img_msg =
+            reinterpret_cast<sensor_msgs::msg::Image*>(data.addr_);
+        detector_node->imageCallback(img_msg);
+      },
+      this);
+
+  img_topic.RegisterCallback(img_cb);
 }
 
-void ArmorDetectorNode::imageCallback(
-    const sensor_msgs::msg::Image::ConstSharedPtr img_msg)
+void ArmorDetectorNode::imageCallback(const sensor_msgs::msg::Image* img_msg)
 {
-  auto armors = detectArmors(img_msg);
+  auto armors = detectArmors(*img_msg);
 
   if (pnp_solver_ != nullptr)
   {
@@ -229,11 +251,11 @@ std::unique_ptr<Detector> ArmorDetectorNode::initDetector()
   return detector;
 }
 
-std::vector<Armor> ArmorDetectorNode::detectArmors(
-    const sensor_msgs::msg::Image::ConstSharedPtr& img_msg)
+std::vector<Armor> ArmorDetectorNode::detectArmors(const sensor_msgs::msg::Image& img_msg)
 {
-  // Convert ROS img to cv::Mat
-  auto img = cv_bridge::toCvShare(img_msg, "rgb8")->image;
+  auto owned = std::make_shared<sensor_msgs::msg::Image>(img_msg);
+  auto cv_img = cv_bridge::toCvShare(owned, "mono8");
+  auto& img = cv_img->image;
 
   // Update params
   detector_->binary_thres = binary_thres_;
@@ -243,14 +265,14 @@ std::vector<Armor> ArmorDetectorNode::detectArmors(
   auto armors = detector_->detect(img);
 
   auto final_time = node_->now();
-  auto latency = (final_time - img_msg->header.stamp).seconds() * 1000;
+  auto latency = (final_time - img_msg.header.stamp).seconds() * 1000;
   XR_LOG_DEBUG("Latency: %fms", latency);
 
   // Publish debug info
   if (debug_)
   {
     binary_img_pub_.publish(
-        cv_bridge::CvImage(img_msg->header, "mono8", detector_->binary_img).toImageMsg());
+        cv_bridge::CvImage(img_msg.header, "mono8", detector_->binary_img).toImageMsg());
 
     // Sort lights and armors data by x coordinate
     std::sort(detector_->debug_lights.data.begin(), detector_->debug_lights.data.end(),
@@ -265,20 +287,22 @@ std::vector<Armor> ArmorDetectorNode::detectArmors(
     {
       auto all_num_img = detector_->getAllNumbersImage();
       number_img_pub_.publish(
-          *cv_bridge::CvImage(img_msg->header, "mono8", all_num_img).toImageMsg());
+          *cv_bridge::CvImage(img_msg.header, "mono8", all_num_img).toImageMsg());
     }
 
-    detector_->drawResults(img);
+    auto result_img = img.clone();
+
+    detector_->drawResults(result_img);
     // Draw camera center
-    cv::circle(img, cam_center_, 5, cv::Scalar(255, 0, 0), 2);
+    cv::circle(result_img, cam_center_, 5, cv::Scalar(255, 0, 0), 2);
     // Draw latency
     std::stringstream latency_ss;
     latency_ss << "Latency: " << std::fixed << std::setprecision(2) << latency << "ms";
     auto latency_s = latency_ss.str();
-    cv::putText(img, latency_s, cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 1.0,
+    cv::putText(result_img, latency_s, cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 1.0,
                 cv::Scalar(0, 255, 0), 2);
     result_img_pub_.publish(
-        cv_bridge::CvImage(img_msg->header, "rgb8", img).toImageMsg());
+        cv_bridge::CvImage(img_msg.header, "rgb8", result_img).toImageMsg());
   }
 
   return armors;

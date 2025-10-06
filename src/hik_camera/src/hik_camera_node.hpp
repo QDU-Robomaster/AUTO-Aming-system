@@ -8,6 +8,8 @@
 #include <sensor_msgs/msg/image.hpp>
 
 #include "libxr.hpp"
+#include "libxr_def.hpp"
+#include "message.hpp"
 
 // STL
 #include <chrono>
@@ -63,8 +65,6 @@ public:
     // 创建 rclcpp::Node 实例
     node_ = rclcpp::Node::make_shared("hik_camera_node");
     // 使用该节点实例来创建 CameraPublisher
-    auto qos = use_sensor_data_qos ? rmw_qos_profile_sensor_data : rmw_qos_profile_default;
-    camera_pub_ = image_transport::create_camera_publisher(node_.get(), "image_raw", qos);
 
     declareParameters();
 
@@ -109,7 +109,8 @@ public:
           image_msg_.data.resize(image_msg_.width * image_msg_.height * 3);
 
           camera_info_msg_.header = image_msg_.header;
-          camera_pub_.publish(image_msg_, camera_info_msg_);
+          info_topic_.Publish(camera_info_msg_);
+          frame_topic_.Publish(image_msg_);
 
           MV_CC_FreeImageBuffer(camera_handle_, &out_frame);
           fail_conut_ = 0;
@@ -198,7 +199,8 @@ private:
 
   sensor_msgs::msg::Image image_msg_;
 
-  image_transport::CameraPublisher camera_pub_;
+  LibXR::Topic frame_topic_ = LibXR::Topic("/image_raw", sizeof(sensor_msgs::msg::Image));
+  LibXR::Topic info_topic_ = LibXR::Topic("/camera_info", sizeof(sensor_msgs::msg::CameraInfo));
 
   int nRet = MV_OK;
   void * camera_handle_;

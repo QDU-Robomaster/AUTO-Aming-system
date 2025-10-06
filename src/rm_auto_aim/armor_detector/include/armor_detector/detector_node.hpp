@@ -20,6 +20,8 @@
 #include "armor_detector/number_classifier.hpp"
 #include "armor_detector/pnp_solver.hpp"
 #include "auto_aim_interfaces/msg/armors.hpp"
+#include "libxr.hpp"
+#include "message.hpp"
 
 namespace rm_auto_aim
 {
@@ -40,10 +42,10 @@ class ArmorDetectorNode
   std::shared_ptr<rclcpp::Node> node_;
 
  private:
-  void imageCallback(const sensor_msgs::msg::Image::ConstSharedPtr img_msg);
+  void imageCallback(const sensor_msgs::msg::Image* img_msg);
 
   std::unique_ptr<Detector> initDetector();
-  std::vector<Armor> detectArmors(const sensor_msgs::msg::Image::ConstSharedPtr& img_msg);
+  std::vector<Armor> detectArmors(const sensor_msgs::msg::Image& img_msg);
 
   void createDebugPublishers();
   void destroyDebugPublishers();
@@ -78,7 +80,6 @@ class ArmorDetectorNode
   rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub_;
 
   // Camera info part
-  rclcpp::Subscription<sensor_msgs::msg::CameraInfo>::SharedPtr cam_info_sub_;
   cv::Point2f cam_center_;
   std::shared_ptr<sensor_msgs::msg::CameraInfo> cam_info_;
   std::unique_ptr<PnPSolver> pnp_solver_;
