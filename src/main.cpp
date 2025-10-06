@@ -1,16 +1,14 @@
-// #include <rclcpp/node.hpp>
-// #include <rclcpp/rclcpp.hpp>
-
 #include "detector_node.hpp"
 #include "hik_camera_node.hpp"
 #include "libxr.hpp"
 #include "libxr_system.hpp"
 #include "ramfs.hpp"
-#include "uvc_camera_node.hpp"
-// #include "rm_serial_driver.hpp"
+#include "rm_serial_driver.hpp"
 #include "terminal.hpp"
 #include "thread.hpp"
-// #include "tracker_node.hpp"
+#include "tracker_node.hpp"
+#include "uart.hpp"
+#include "uvc_camera_node.hpp"
 
 int main(int argc, char** argv)
 {
@@ -123,33 +121,17 @@ int main(int argc, char** argv)
       {"negative"}  // ignore_classes
   );
 
-  //   // Tracker
-  //   rm_auto_aim::ArmorTrackerNode armor_tracker_node(10.0,     // max_armor_distance
-  //                                                    0.5,      //
-  //                                                    tracker_max_match_distance 1.0, //
-  //                                                    tracker_max_match_yaw_diff 5, //
-  //                                                    tracker_tracking_thres 1.0, //
-  //                                                    tracker_lost_time_thres 0.038, //
-  //                                                    tracker_k 10,       //
-  //                                                    tracker_bias_time 0.18375,  //
-  //                                                    tracker_s_bias 0.0,      //
-  //                                                    tracker_z_bias 0.05,     //
-  //                                                    ekf_sigma2_q_xyz 5.0,      //
-  //                                                    ekf_sigma2_q_yaw 80.0,     //
-  //                                                    ekf_sigma2_q_r 0.00025,  //
-  //                                                    ekf_r_xyz_factor 0.005,    //
-  //                                                    ekf_r_yaw "gimbal_odom"  //
-  //                                                    target_frame
-  //   );
+  // Tracker
+  rm_auto_aim::ArmorTrackerNode armor_tracker_node(10.0,  // max_armor_distance
+                                                   0.5, 1.0, 5, 1.0, 0.038, 10, 0.18375,
+                                                   0.0, 0.05, 5.0, 80.0, 0.00025, 0.005,
+                                                   "gimbal_odom");
 
-  //   executor.add_node(armor_detector_node.node_);
-  //   executor.add_node(armor_tracker_node.node_);
-
-  // // Serial
-  // #if 1
-  //   rm_serial_driver::RMSerialDriver serial_driver(0.0, "/dev/ttyUSB0", 460800,
-  //   "none"); executor.add_node(serial_driver.node_);
-  // #endif
+// Serial
+#if 1
+  rm_serial_driver::RMSerialDriver serial_driver(0.0, "/dev/ttyUSB0", 460800,
+                                                 LibXR::UART::Parity::NO_PARITY);
+#endif
 
   //   // 运行 ROS 2 节点
   //   executor.spin();

@@ -42,7 +42,6 @@ target_link_libraries(
 )
 
 target_include_directories(hik_camera PUBLIC
-  PUBLIC $<TARGET_PROPERTY:xr,INTERFACE_INCLUDE_DIRECTORIES>
   PUBLIC $<TARGET_PROPERTY:camera_base,INTERFACE_INCLUDE_DIRECTORIES>
   PUBLIC ${OpenCV_INCLUDE_DIRS}
   PUBLIC hikSDK/include src/
