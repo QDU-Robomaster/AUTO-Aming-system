@@ -254,7 +254,7 @@ std::unique_ptr<Detector> ArmorDetectorNode::initDetector()
 std::vector<Armor> ArmorDetectorNode::detectArmors(const sensor_msgs::msg::Image& img_msg)
 {
   auto owned = std::make_shared<sensor_msgs::msg::Image>(img_msg);
-  auto cv_img = cv_bridge::toCvShare(owned, "mono8");
+  auto cv_img = cv_bridge::toCvShare(owned, "bgr8");
   auto& img = cv_img->image;
 
   // Update params
