@@ -43,14 +43,6 @@ RMSerialDriver::RMSerialDriver(double timestamp_offset, std::string device_name,
   getParams();  // 传参
 
   //* 创建发布者
-  // 时间偏移量
-  // /joint_states 发布端,用来发布云台
-  joint_state_pub_ = node_->create_publisher<sensor_msgs::msg::JointState>(
-      "/joint_states", rclcpp::QoS(rclcpp::KeepLast(1)));
-
-  // 发布当前弹速
-  velocity_pub_ = node_->create_publisher<auto_aim_interfaces::msg::Velocity>(
-      "/current_velocity", 10);
 
   // // 检查参数客户端
   detector_param_client_ =
@@ -181,14 +173,14 @@ void RMSerialDriver::receiveData()
 
           // float temp_yaw = yaw_re_trans(packet.yaw);
           joint_state.position.push_back(packet.yaw);
-          joint_state_pub_->publish(joint_state);
+          joint_state_topic_.Publish(joint_state);
 
           // 速度发布
           auto_aim_interfaces::msg::Velocity current_velocity;
           current_velocity.header.stamp =
               node_->now() + rclcpp::Duration::from_seconds(timestamp_offset_);
           current_velocity.velocity = packet.current_v;
-          velocity_pub_->publish(current_velocity);
+          velocity_topic_.Publish(current_velocity);
         }
         else
         {

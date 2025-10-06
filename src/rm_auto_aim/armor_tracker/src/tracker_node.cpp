@@ -162,16 +162,6 @@ ArmorTrackerNode::ArmorTrackerNode(
       "/current_velocity",
       rclcpp::QoS(rclcpp::QoSInitialization::from_rmw(rmw_qos_profile_sensor_data)),
       std::bind(&ArmorTrackerNode::velocityCallback, this, std::placeholders::_1));
-  // Measurement publisher (for debug usage)
-  info_pub_ =
-      node_->create_publisher<auto_aim_interfaces::msg::TrackerInfo>("/tracker/info", 10);
-
-  // Publisher
-  target_pub_ = node_->create_publisher<auto_aim_interfaces::msg::Target>(
-      "/tracker/target", rclcpp::SensorDataQoS());
-
-  send_pub_ = node_->create_publisher<auto_aim_interfaces::msg::Send>(
-      "/tracker/send", rclcpp::SensorDataQoS());
 
   // Visualization Marker Publisher
   // See http://wiki.ros.org/rviz/DisplayTypes/Marker
@@ -200,8 +190,6 @@ ArmorTrackerNode::ArmorTrackerNode(
   armor_marker_.scale.z = 0.125;
   armor_marker_.color.a = 1.0;
   armor_marker_.color.r = 1.0;
-  marker_pub_ = node_->create_publisher<visualization_msgs::msg::MarkerArray>(
-      "/tracker/marker", 10);
 }
 
 void ArmorTrackerNode::velocityCallback(
@@ -270,7 +258,7 @@ void ArmorTrackerNode::armorsCallback(
     info_msg.position.y = tracker_->measurement(1);
     info_msg.position.z = tracker_->measurement(2);
     info_msg.yaw = tracker_->measurement(3);
-    info_pub_->publish(info_msg);
+    info_topic_.Publish(info_msg);
 
     if (tracker_->tracker_state == Tracker::DETECTING)
     {
@@ -315,9 +303,8 @@ void ArmorTrackerNode::armorsCallback(
 
   last_time_ = time;
 
-  send_pub_->publish(send_msg);
-
-  target_pub_->publish(target_msg);
+  send_topic_.Publish(send_msg);
+  target_topic_.Publish(target_msg);
 
   publishMarkers(target_msg);
 }
@@ -405,7 +392,7 @@ void ArmorTrackerNode::publishMarkers(const auto_aim_interfaces::msg::Target& ta
   marker_array.markers.emplace_back(position_marker_);
   marker_array.markers.emplace_back(linear_v_marker_);
   marker_array.markers.emplace_back(angular_v_marker_);
-  marker_pub_->publish(marker_array);
+  marker_topic_.Publish(marker_array);
 }
 
 }  // namespace rm_auto_aim

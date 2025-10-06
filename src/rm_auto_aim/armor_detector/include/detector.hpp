@@ -10,16 +10,14 @@
 #include <string>
 #include <vector>
 
-#include "armor_detector/armor.hpp"
-#include "armor_detector/number_classifier.hpp"
-#include "auto_aim_interfaces/msg/debug_armors.hpp"
-#include "auto_aim_interfaces/msg/debug_lights.hpp"
+#include "armor.hpp"
+#include "number_classifier.hpp"
 
 namespace rm_auto_aim
 {
 class Detector
 {
-public:
+ public:
   struct LightParams
   {
     // width / height
@@ -41,17 +39,17 @@ public:
     double max_angle;
   };
 
-  Detector(const int & bin_thres, const int & color, const LightParams & l, const ArmorParams & a);
+  Detector(const int& bin_thres, const int& color, const LightParams& l,
+           const ArmorParams& a);
 
-  std::vector<Armor> detect(const cv::Mat & input);
+  std::vector<Armor> detect(const cv::Mat& input);
 
-  cv::Mat preprocessImage(const cv::Mat & input);
-  std::vector<Light> findLights(const cv::Mat & rbg_img, const cv::Mat & binary_img);
-  std::vector<Armor> matchLights(const std::vector<Light> & lights);
+  cv::Mat preprocessImage(const cv::Mat& input);
+  std::vector<Light> findLights(const cv::Mat& rbg_img, const cv::Mat& binary_img);
+  std::vector<Armor> matchLights(const std::vector<Light>& lights);
 
   // For debug usage
   cv::Mat getAllNumbersImage();
-  void drawResults(cv::Mat & img);
 
   int binary_thres;
   int detect_color;
@@ -62,14 +60,12 @@ public:
 
   // Debug msgs
   cv::Mat binary_img;
-  auto_aim_interfaces::msg::DebugLights debug_lights;
-  auto_aim_interfaces::msg::DebugArmors debug_armors;
 
-private:
-  bool isLight(const Light & possible_light);
-  bool containLight(
-    const Light & light_1, const Light & light_2, const std::vector<Light> & lights);
-  ArmorType isArmor(const Light & light_1, const Light & light_2);
+ private:
+  bool isLight(const Light& possible_light);
+  bool containLight(const Light& light_1, const Light& light_2,
+                    const std::vector<Light>& lights);
+  ArmorType isArmor(const Light& light_1, const Light& light_2);
 
   std::vector<Light> lights_;
   std::vector<Armor> armors_;

@@ -24,6 +24,7 @@
 #include "auto_aim_interfaces/msg/send.hpp"
 #include "auto_aim_interfaces/msg/target.hpp"
 #include "auto_aim_interfaces/msg/velocity.hpp"
+#include "message.hpp"
 
 namespace rm_serial_driver
 {
@@ -84,9 +85,12 @@ class RMSerialDriver
   auto_aim_interfaces::msg::Receive::SharedPtr receive_msg_;
 
   double timestamp_offset_ = 0;
-  rclcpp::Publisher<sensor_msgs::msg::JointState>::SharedPtr joint_state_pub_;
-  rclcpp::Publisher<auto_aim_interfaces::msg::Velocity>::SharedPtr velocity_pub_;
-  rclcpp::Publisher<auto_aim_interfaces::msg::Receive>::SharedPtr receive_pub_;
+  LibXR::Topic joint_state_topic_ =
+      LibXR::Topic("/joint_states", sizeof(sensor_msgs::msg::JointState));
+  LibXR::Topic velocity_topic_ =
+      LibXR::Topic("/current_velocity", sizeof(auto_aim_interfaces::msg::Velocity));
+  LibXR::Topic receive_topic_ =
+      LibXR::Topic("/tracker/receive", sizeof(auto_aim_interfaces::msg::Receive));
 
   rclcpp::Subscription<auto_aim_interfaces::msg::Target>::SharedPtr target_sub_;
   rclcpp::Subscription<auto_aim_interfaces::msg::Send>::SharedPtr send_sub_;

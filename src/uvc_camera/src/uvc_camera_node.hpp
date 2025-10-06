@@ -1,6 +1,7 @@
 #pragma once
 
-#include "MvCameraControl.h"
+#include <opencv2/opencv.hpp>
+
 #include "camera_base.hpp"
 #include "libxr.hpp"
 #include "libxr_def.hpp"
@@ -15,27 +16,27 @@
 #include <chrono>
 #include <cstdint>
 #include <memory>
-#include <opencv2/core/mat.hpp>
 #include <string>
 #include <thread>
 #include <vector>
 
-namespace hik_camera
+namespace uvc_camera
 {
 
-class HikCameraNode
+class UvcCameraNode
 {
   static constexpr int MAX_W = 4096;
   static constexpr int MAX_H = 3072;
-  static constexpr int CH = 3;
+  static constexpr int CH = 3;  // RGB8
   static constexpr size_t BUF_BYTES = static_cast<size_t>(MAX_W) * MAX_H * CH;
 
  public:
   struct InitParam
   {
     std::string camera_name = "narrow_stereo";
-    int image_width = 1440;
-    int image_height = 1080;
+    int image_width = 1280;
+    int image_height = 720;
+    // 与海康保持接口兼容（可选）：
     std::array<double, 9> camera_matrix{{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
     std::array<double, 5> distortion_coefficients{0.0, 0.0, 0.0, 0.0, 0.0};
     std::array<double, 9> rectification_matrix{
@@ -43,53 +44,53 @@ class HikCameraNode
     std::array<double, 12> projection_matrix{
         {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
     std::array<char, 32> distortion_model = {"plumb_bob"};
+
+    int camera_index = -1;  // -1 表示自动枚举并选择第一个可用摄像头
   };
 
   struct RuntimeParam
   {
-    float gain = 32.0f;
-    float exposure_time = 500.0f;  // microseconds
+    // 注意：UVC 驱动对增益/曝光的单位与语义并不完全统一；此处尽量兼容。
+    float gain = 0.0f;            // OpenCV CAP_PROP_GAIN（单位依驱动而异）
+    float exposure_time = 10000;  // 近似微秒；驱动可能要求对数或负值（见 .cpp 注释）
+    bool manual_exposure = true;  // 尝试关闭自动曝光
+    int fps = 30;                 // 期望帧率
   };
 
  public:
-  // Convenience default constructor
-  HikCameraNode();
-
-  // Main constructor (definition in .cpp)
-  explicit HikCameraNode(const InitParam& init, const RuntimeParam& runtime);
-
-  ~HikCameraNode();
+  UvcCameraNode();
+  explicit UvcCameraNode(const InitParam& init, const RuntimeParam& runtime);
+  ~UvcCameraNode();
 
   void SetRuntimeParam(const RuntimeParam& p);
-
-  // Trivial getters can stay inline
   RuntimeParam GetRuntimeParam() const { return runtime_; }
   InitParam GetInitParam() const { return init_; }
 
  private:
   void UpdateParameters();
+  bool OpenCamera();
+  static std::vector<int> EnumerateCameras(int max_test = 10);
 
-  // Runtime state
-  std::unique_ptr<std::array<uint8_t, BUF_BYTES>> frame_buf_{};  // large RGB buffer
+ private:
+  // 数据缓冲（与海康示例保持风格一致）
+  std::unique_ptr<std::array<uint8_t, BUF_BYTES>> frame_buf_{};
 
-  // Parameters
+  // 参数
   InitParam init_{};
   RuntimeParam runtime_{};
 
-  // Topics
+  // 话题
   LibXR::Topic frame_topic_ = LibXR::Topic("image_raw", sizeof(cv::Mat));
   LibXR::Topic info_topic_ = LibXR::Topic("camera_info", sizeof(CameraBase::CameraInfo));
 
-  // Camera handle & info
-  void* camera_handle_{};
-  MV_IMAGE_BASIC_INFO img_info_{};
-  MV_CC_PIXEL_CONVERT_PARAM convert_param_{};
-
+  // 设备
+  std::unique_ptr<cv::VideoCapture> cap_{};
   std::string camera_name_;
+  int device_index_ = -1;
 
   int fail_count_ = 0;
   std::atomic<bool> running_{false};
   std::thread capture_thread_{};
 };
 
-}  // namespace hik_camera
+}  // namespace uvc_camera

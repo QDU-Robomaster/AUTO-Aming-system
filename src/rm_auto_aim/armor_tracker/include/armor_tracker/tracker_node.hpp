@@ -25,6 +25,7 @@
 #include "auto_aim_interfaces/msg/target.hpp"
 #include "auto_aim_interfaces/msg/tracker_info.hpp"
 #include "auto_aim_interfaces/msg/velocity.hpp"
+#include "message.hpp"
 
 namespace rm_auto_aim
 {
@@ -80,18 +81,22 @@ class ArmorTrackerNode
   std::shared_ptr<velocity_tf2_filter> velocity_filter_;
 
   // Tracker info publisher
-  rclcpp::Publisher<auto_aim_interfaces::msg::TrackerInfo>::SharedPtr info_pub_;
+  LibXR::Topic info_topic_ =
+      LibXR::Topic("/tracker/info", sizeof(auto_aim_interfaces::msg::TrackerInfo));
 
   // Publisher
-  rclcpp::Publisher<auto_aim_interfaces::msg::Target>::SharedPtr target_pub_;
-  rclcpp::Publisher<auto_aim_interfaces::msg::Send>::SharedPtr send_pub_;
+  LibXR::Topic target_topic_ =
+      LibXR::Topic("/tracker/target", sizeof(auto_aim_interfaces::msg::Target));
+  LibXR::Topic send_topic_ =
+      LibXR::Topic("/tracker/send", sizeof(auto_aim_interfaces::msg::Send));
 
   // Visualization marker publisher
   visualization_msgs::msg::Marker position_marker_;
   visualization_msgs::msg::Marker linear_v_marker_;
   visualization_msgs::msg::Marker angular_v_marker_;
   visualization_msgs::msg::Marker armor_marker_;
-  rclcpp::Publisher<visualization_msgs::msg::MarkerArray>::SharedPtr marker_pub_;
+  LibXR::Topic marker_topic_ =
+      LibXR::Topic("/tracker/marker", sizeof(visualization_msgs::msg::MarkerArray));
 };
 
 }  // namespace rm_auto_aim
