@@ -16,7 +16,6 @@
 // STL
 #include <cmath>
 #include <memory>
-#include <string>
 #include <vector>
 
 // Project

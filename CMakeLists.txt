@@ -1,15 +1,13 @@
 cmake_minimum_required(VERSION 3.10)
 project(rm_auto_aim)
 
-## 设置 C++14 标准
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 ## 强制启用警告
 add_definitions(-Wall -Werror)
 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fdata-sections -ffunction-sections")
-set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -fno-threadsafe-statics")
+add_compile_options(-g -O0)
 
 ## 导出编译命令以便使用 clangd
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)

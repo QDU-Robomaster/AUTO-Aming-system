@@ -132,7 +132,7 @@ int main(int, char**)
   // Tracker
   ArmorTrackerNode armor_tracker_node(10.0,  // max_armor_distance
                                       0.5, 1.0, 5, 1.0, 0.038, 10, 0.18375, 0.0, 0.05,
-                                      5.0, 80.0, 0.00025, 0.005, "gimbal_odom");
+                                      5.0, 80.0, 0.00025, 0.005);
 
 // Serial
 #if 1

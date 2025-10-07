@@ -3,8 +3,6 @@
 
 // STD
 #include <memory>
-#include <string>
-#include <vector>
 
 #include "SolveTrajectory.hpp"
 #include "libxr_time.hpp"
@@ -24,7 +22,6 @@ class ArmorTrackerNode
       double tracker_z_bias = 0.21265, double ekf_sigma2_q_xyz = 20.0,
       double ekf_sigma2_q_yaw = 100.0, double ekf_sigma2_q_r = 800,
       double ekf_r_xyz_factor = 0.05, double ekf_r_yaw = 0.02,
-      std::string target_frame = "odom",
       LibXR::Transform<double> base_transform_static = {});
 
   struct TrackerInfo
@@ -47,9 +44,9 @@ class ArmorTrackerNode
   };
 
  private:
-  void velocityCallback(double velocity_msg);
+  void VelocityCallback(double velocity_msg);
 
-  void armorsCallback(ArmorDetectorResults& armors_ptr);
+  void ArmorsCallback(ArmorDetectorResults& armors_ptr);
 
   // Maximum allowable armor distance in the XOY plane
   double max_armor_distance_;
@@ -60,10 +57,10 @@ class ArmorTrackerNode
 
   // Armor tracker
   double s2qxyz_, s2qyaw_, s2qr_;
-  double r_xyz_factor, r_yaw;
+  double r_xyz_factor_, r_yaw_;
   double lost_time_thres_;
   std::unique_ptr<Tracker> tracker_;
-  std::unique_ptr<SolveTrajectory> gaf_solver;
+  std::unique_ptr<SolveTrajectory> gaf_solver_;
 
   // Subscriber with tf2 message_filter
   LibXR::Transform<double> base_transform_static_;

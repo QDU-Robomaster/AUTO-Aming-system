@@ -57,6 +57,9 @@ RMSerialDriver::RMSerialDriver(double timestamp_offset, std::string device_name,
 
   send_topic.RegisterCallback(send_cb);
 
+  double v = 0.0;
+  velocity_topic_.Publish(v);
+
   // target_sub_ = this->create_subscription<auto_aim_interfaces::msg::Target>(
   //   "/tracker/target", rclcpp::SensorDataQoS(),
   //   std::bind(&RMSerialDriver::sendData, this, std::placeholders::_1));

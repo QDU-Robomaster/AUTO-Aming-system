@@ -19,50 +19,50 @@ class ExtendedKalmanFilter
                                 const Eigen::MatrixXd& P0);
 
   // Set the initial state
-  void setState(const Eigen::VectorXd& x0);
+  void SetState(const Eigen::VectorXd& x0);
 
   // Compute a predicted state
-  Eigen::MatrixXd predict();
+  Eigen::MatrixXd Predict();
 
   // Update the estimated state based on measurement
-  Eigen::MatrixXd update(const Eigen::VectorXd& z);
+  Eigen::MatrixXd Update(const Eigen::VectorXd& z);
 
  private:
   // Process nonlinear vector function
-  VecVecFunc f;
+  VecVecFunc f_;
   // Observation nonlinear vector function
-  VecVecFunc h;
+  VecVecFunc h_;
   // Jacobian of f()
-  VecMatFunc jacobian_f;
-  Eigen::MatrixXd F;
+  VecMatFunc jacobian_f_;
+  Eigen::MatrixXd m_f_;
   // Jacobian of h()
-  VecMatFunc jacobian_h;
-  Eigen::MatrixXd H;
+  VecMatFunc jacobian_h_;
+  Eigen::MatrixXd m_h_;
   // Process noise covariance matrix
-  VoidMatFunc update_Q;
-  Eigen::MatrixXd Q;
+  VoidMatFunc update_q_;
+  Eigen::MatrixXd m_q_;
   // Measurement noise covariance matrix
-  VecMatFunc update_R;
-  Eigen::MatrixXd R;
+  VecMatFunc update_r_;
+  Eigen::MatrixXd m_r_;
 
   // Priori error estimate covariance matrix
-  Eigen::MatrixXd P_pri;
+  Eigen::MatrixXd p_pri_;
   // Posteriori error estimate covariance matrix
-  Eigen::MatrixXd P_post;
+  Eigen::MatrixXd p_post_;
 
   // Kalman gain
-  Eigen::MatrixXd K;
+  Eigen::MatrixXd m_k_;
 
   // System dimensions
-  int n;
+  int n_;
 
   // N-size identity
-  Eigen::MatrixXd I;
+  Eigen::MatrixXd i_;
 
   // Priori state
-  Eigen::VectorXd x_pri;
+  Eigen::VectorXd x_pri_;
   // Posteriori state
-  Eigen::VectorXd x_post;
+  Eigen::VectorXd x_post_;
 };
 
 #endif  // ARMOR_PROCESSOR__KALMAN_FILTER_HPP_

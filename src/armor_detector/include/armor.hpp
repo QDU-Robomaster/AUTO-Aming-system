@@ -126,10 +126,10 @@ struct Armor
 /** @brief 单个装甲的发布结果。 */
 struct ArmorDetectorResult
 {
-  ArmorNumber number;              ///< 编号字符串
-  ArmorType type;                  ///< 装甲类型
-  float distance_to_image_center;  ///< 中心点到图像中心的距离
-  LibXR::Transform<double> pose;   ///< 相机坐标系下的位姿
+  ArmorNumber number;               ///< 编号字符串
+  ArmorType type;                   ///< 装甲类型
+  double distance_to_image_center;  ///< 中心点到图像中心的距离
+  LibXR::Transform<double> pose;    ///< 相机坐标系下的位姿
 };
 
 /** @brief 装甲发布结果数组类型别名。 */

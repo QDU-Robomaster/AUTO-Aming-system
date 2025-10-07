@@ -4,12 +4,7 @@
 // Eigen
 #include <Eigen/Eigen>
 
-// STD
-#include <memory>
-#include <string>
-
 #include "armor.hpp"
-#include "armor_detector.hpp"
 #include "extended_kalman_filter.hpp"
 #include "transform.hpp"
 
@@ -25,14 +20,9 @@ class Tracker  // 整车观测
  public:
   Tracker(double max_match_distance, double max_match_yaw_diff);
 
-  void init(const ArmorDetectorResults& armors_msg);
+  void Init(const ArmorDetectorResults& armors_msg);
 
-  void update(const ArmorDetectorResults& armors_msg);
-
-  ExtendedKalmanFilter ekf;
-
-  int tracking_thres;
-  int lost_thres;
+  void Update(const ArmorDetectorResults& armors_msg);
 
   enum State
   {             // 四个状态
@@ -40,33 +30,37 @@ class Tracker  // 整车观测
     DETECTING,  // 观测中
     TRACKING,   // 跟踪中
     TEMP_LOST,  // 临时丢失
-  } tracker_state;
+  } tracker_state_;
+
+  ExtendedKalmanFilter ekf_;
+
+  int tracking_thres_;
+  int lost_thres_;
 
   // 装甲板情况
-  ArmorNumber tracked_id;             // 装甲板号
-  ArmorDetectorResult tracked_armor;  // 被跟踪的装甲板
-  ArmorsNum tracked_armors_num;       // 被跟踪装甲版数
+  ArmorNumber tracked_id_;             // 装甲板号
+  ArmorDetectorResult tracked_armor_;  // 被跟踪的装甲板
+  ArmorsNum tracked_armors_num_;       // 被跟踪装甲版数
 
-  double info_position_diff;
-  double info_yaw_diff;
+  double info_position_diff_;
+  double info_yaw_diff_;
 
-  Eigen::VectorXd measurement;  // 测量
+  Eigen::VectorXd measurement_;  // 测量
 
-  Eigen::VectorXd target_state;  // 目标状态
+  Eigen::VectorXd target_state_;  // 目标状态
 
   //? 储存另一片装甲板信息
-  double dz, another_r;
+  double dz_, another_r_;
 
- private:
-  void initEKF(const ArmorDetectorResult& a);
+  void InitEKF(const ArmorDetectorResult& a);
 
-  void updateArmorsNum(const ArmorDetectorResult& a);
+  void UpdateArmorsNum(const ArmorDetectorResult& a);
 
-  void handleArmorJump(const ArmorDetectorResult& a);
+  void HandleArmorJump(const ArmorDetectorResult& a);
 
-  double orientationToYaw(const LibXR::Quaternion<double>& q);
+  double OrientationToYaw(const LibXR::Quaternion<double>& q);
 
-  Eigen::Vector3d getArmorPositionFromState(const Eigen::VectorXd& x);
+  Eigen::Vector3d GetArmorPositionFromState(const Eigen::VectorXd& x);
 
   double max_match_distance_;
   double max_match_yaw_diff_;

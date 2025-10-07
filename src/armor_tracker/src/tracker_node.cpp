@@ -2,6 +2,7 @@
 
 #include <cstring>
 #include <memory>
+#include <utility>
 #include <vector>
 
 #include "SolveTrajectory.hpp"
@@ -9,6 +10,7 @@
 #include "libxr.hpp"
 #include "libxr_time.hpp"
 #include "libxr_type.hpp"
+#include "logger.hpp"
 #include "message.hpp"
 #include "mutex.hpp"
 #include "timebase.hpp"
@@ -20,29 +22,28 @@ ArmorTrackerNode::ArmorTrackerNode(
     double tracker_lost_time_thres, double tracker_k, int tracker_bias_time,
     double tracker_s_bias, double tracker_z_bias, double ekf_sigma2_q_xyz,
     double ekf_sigma2_q_yaw, double ekf_sigma2_q_r, double ekf_r_xyz_factor,
-    double ekf_r_yaw, std::string target_frame,
-    LibXR::Transform<double> base_transform_static)
+    double ekf_r_yaw, LibXR::Transform<double> base_transform_static)
     : max_armor_distance_(max_armor_distance),
       s2qxyz_(ekf_sigma2_q_xyz),
       s2qyaw_(ekf_sigma2_q_yaw),
       s2qr_(ekf_sigma2_q_r),
-      r_xyz_factor(ekf_r_xyz_factor),
-      r_yaw(ekf_r_yaw),
+      r_xyz_factor_(ekf_r_xyz_factor),
+      r_yaw_(ekf_r_yaw),
       lost_time_thres_(tracker_lost_time_thres),
-      base_transform_static_(base_transform_static)
+      base_transform_static_(std::move(base_transform_static))
 {
   XR_LOG_INFO("Starting TrackerNode!");
   // Tracker
   double max_match_distance = tracker_max_match_distance;
   double max_match_yaw_diff = tracker_max_match_yaw_diff;
   tracker_ = std::make_unique<Tracker>(max_match_distance, max_match_yaw_diff);
-  tracker_->tracking_thres = tracker_tracking_thres;
+  tracker_->tracking_thres_ = tracker_tracking_thres;
 
   double k = tracker_k;
   int bias_time = tracker_bias_time;
   double s_bias = tracker_s_bias;
   double z_bias = tracker_z_bias;
-  gaf_solver = std::make_unique<SolveTrajectory>(k, bias_time, s_bias, z_bias);
+  gaf_solver_ = std::make_unique<SolveTrajectory>(k, bias_time, s_bias, z_bias);
 
   // EKF
   // xa = x_armor, xc = x_robot_center
@@ -82,18 +83,20 @@ ArmorTrackerNode::ArmorTrackerNode(
     return z;
   };
   // J_h - Jacobian of observation function
-  auto j_h = [](const Eigen::VectorXd & x) {  //状体量到观测量的一个转换矩阵，将整车c的状态转换为装甲板a的状态，用预测之后的c推出预测之后的a
-    Eigen::MatrixXd h(4, 9);
-    double yaw = x(6), r = x(8);
-    // clang-format off
+  auto j_h =
+      [](const Eigen::VectorXd&
+             x) {  // 状体量到观测量的一个转换矩阵，将整车c的状态转换为装甲板a的状态，用预测之后的c推出预测之后的a
+        Eigen::MatrixXd h(4, 9);
+        double yaw = x(6), r = x(8);
+        // clang-format off
     //              xc   v_xc yc   v_yc za   v_za yaw         v_yaw r
     h <<  /*xa*/    1,   0,   0,   0,   0,   0,   r*sin(yaw), 0,   -cos(yaw),
           /*ya*/    0,   0,   1,   0,   0,   0,   -r*cos(yaw),0,   -sin(yaw),
           /*za*/    0,   0,   0,   0,   1,   0,   0,          0,   0,
           /*yaw*/   0,   0,   0,   0,   0,   0,   1,          0,   0;
-    // clang-format on
-    return h;
-  };
+        // clang-format on
+        return h;
+      };
   auto u_q = [this]()
   {
     Eigen::MatrixXd q(9, 9);
@@ -119,14 +122,14 @@ ArmorTrackerNode::ArmorTrackerNode(
   auto u_r = [this](const Eigen::VectorXd& z)
   {
     Eigen::DiagonalMatrix<double, 4> r;
-    double x = r_xyz_factor;
-    r.diagonal() << abs(x * z[0]), abs(x * z[1]), abs(x * z[2]), r_yaw;
+    double x = r_xyz_factor_;
+    r.diagonal() << abs(x * z[0]), abs(x * z[1]), abs(x * z[2]), r_yaw_;
     return r;
   };
   // P - error estimate covariance matrix
   Eigen::DiagonalMatrix<double, 9> p0;
   p0.setIdentity();
-  tracker_->ekf = ExtendedKalmanFilter{f, h, j_f, j_h, u_q, u_r, p0};
+  tracker_->ekf_ = ExtendedKalmanFilter{f, h, j_f, j_h, u_q, u_r, p0};
 
   LibXR::Topic armors_topic = LibXR::Topic::Find("/detector/armors");
 
@@ -134,7 +137,7 @@ ArmorTrackerNode::ArmorTrackerNode(
       [](bool, ArmorTrackerNode* tracker_node, LibXR::RawData& data)
       {
         auto armors_msg = reinterpret_cast<ArmorDetectorResults*>(data.addr_);
-        tracker_node->armorsCallback(*armors_msg);
+        tracker_node->ArmorsCallback(*armors_msg);
       },
       this);
 
@@ -147,7 +150,7 @@ ArmorTrackerNode::ArmorTrackerNode(
       [](bool, ArmorTrackerNode* tracker_node, LibXR::RawData& data)
       {
         auto velocity_msg = reinterpret_cast<double*>(data.addr_);
-        tracker_node->velocityCallback(*velocity_msg);
+        tracker_node->VelocityCallback(*velocity_msg);
       },
       this);
 
@@ -159,7 +162,7 @@ ArmorTrackerNode::ArmorTrackerNode(
   auto base_rotation_cb = LibXR::Topic::Callback::Create(
       [](bool, ArmorTrackerNode* tracker_node, LibXR::RawData& data)
       {
-        LibXR::Mutex::LockGuard(tracker_node->base_rotation_lock_);
+        LibXR::Mutex::LockGuard lock(tracker_node->base_rotation_lock_);
         auto base_rotation_msg = reinterpret_cast<LibXR::Quaternion<double>*>(data.addr_);
         tracker_node->base_rotation_ = *base_rotation_msg;
       },
@@ -168,13 +171,15 @@ ArmorTrackerNode::ArmorTrackerNode(
   base_rotation_topic.RegisterCallback(base_rotation_cb);
 }
 
-void ArmorTrackerNode::velocityCallback(double velocity_msg)
+void ArmorTrackerNode::VelocityCallback(double velocity_msg)
 {
-  gaf_solver->init(velocity_msg);
+  gaf_solver_->Init(velocity_msg);
 }
 
-void ArmorTrackerNode::armorsCallback(ArmorDetectorResults& armors_msg)
+void ArmorTrackerNode::ArmorsCallback(ArmorDetectorResults& armors_msg)
 {
+  XR_LOG_DEBUG("Got %d armors", static_cast<int>(armors_msg.size()));
+
   // Tranform armor position from image frame to world coordinate
   base_rotation_lock_.Lock();
   for (auto& armor : armors_msg)
@@ -207,39 +212,39 @@ void ArmorTrackerNode::armorsCallback(ArmorDetectorResults& armors_msg)
   auto time = LibXR::Timebase::GetMicroseconds();
 
   // Update tracker
-  if (tracker_->tracker_state == Tracker::LOST)
+  if (tracker_->tracker_state_ == Tracker::LOST)
   {
-    tracker_->init(armors_msg);
+    tracker_->Init(armors_msg);
     target_msg.tracking = false;
   }
   else
   {
     // 求时间差
     dt_ = (time - last_time_).ToSecond();
-    tracker_->lost_thres = static_cast<int>(lost_time_thres_ / dt_);
-    tracker_->update(armors_msg);
+    tracker_->lost_thres_ = static_cast<int>(lost_time_thres_ / dt_);
+    tracker_->Update(armors_msg);
 
     // Publish Info
-    info_msg.position_diff = tracker_->info_position_diff;
-    info_msg.yaw_diff = tracker_->info_yaw_diff;
-    info_msg.position.x() = tracker_->measurement(0);
-    info_msg.position.y() = tracker_->measurement(1);
-    info_msg.position.z() = tracker_->measurement(2);
-    info_msg.yaw = tracker_->measurement(3);
+    info_msg.position_diff = tracker_->info_position_diff_;
+    info_msg.yaw_diff = tracker_->info_yaw_diff_;
+    info_msg.position.x() = tracker_->measurement_(0);
+    info_msg.position.y() = tracker_->measurement_(1);
+    info_msg.position.z() = tracker_->measurement_(2);
+    info_msg.yaw = tracker_->measurement_(3);
     info_topic_.Publish(info_msg);
 
-    if (tracker_->tracker_state == Tracker::DETECTING)
+    if (tracker_->tracker_state_ == Tracker::DETECTING)
     {
       target_msg.tracking = false;
     }
-    else if (tracker_->tracker_state == Tracker::TRACKING ||
-             tracker_->tracker_state == Tracker::TEMP_LOST)
+    else if (tracker_->tracker_state_ == Tracker::TRACKING ||
+             tracker_->tracker_state_ == Tracker::TEMP_LOST)
     {
       target_msg.tracking = true;
       // Fill target message
-      const auto& state = tracker_->target_state;
-      target_msg.id = tracker_->tracked_id;
-      target_msg.armors_num = static_cast<int>(tracker_->tracked_armors_num);
+      const auto& state = tracker_->target_state_;
+      target_msg.id = tracker_->tracked_id_;
+      target_msg.armors_num = static_cast<int>(tracker_->tracked_armors_num_);
       target_msg.position.x() = state(0);
       target_msg.velocity.x() = state(1);
       target_msg.position.y() = state(2);
@@ -249,13 +254,13 @@ void ArmorTrackerNode::armorsCallback(ArmorDetectorResults& armors_msg)
       target_msg.yaw = state(6);
       target_msg.v_yaw = state(7);
       target_msg.radius_1 = state(8);
-      target_msg.radius_2 = tracker_->another_r;
-      target_msg.dz = tracker_->dz;
+      target_msg.radius_2 = tracker_->another_r_;
+      target_msg.dz = tracker_->dz_;
 
       float pitch = 0, yaw = 0, aim_x = 0, aim_y = 0, aim_z = 0;
-      gaf_solver->autoSolveTrajectory(pitch, yaw, aim_x, aim_y, aim_z, &target_msg);
+      gaf_solver_->AutoSolveTrajectory(pitch, yaw, aim_x, aim_y, aim_z, &target_msg);
 
-      gaf_solver->setFireCallback([&](bool is_fire) { send_msg.is_fire = is_fire; });
+      gaf_solver_->SetFireCallback([&](bool is_fire) { send_msg.is_fire = is_fire; });
       send_msg.position.x() = aim_x;
       send_msg.position.y() = aim_y;
       send_msg.position.z() = aim_z;

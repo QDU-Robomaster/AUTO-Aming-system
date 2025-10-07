@@ -35,8 +35,14 @@ ArmorDetector::ArmorDetector(const Config& cfg)
                           static_cast<float>(camera_info->camera_matrix[5]));
           self->cam_info_ = std::make_shared<CameraBase::CameraInfo>(*camera_info);
 
-          std::vector<double> dist = CameraBase::CameraInfo::ToPnPDistCoeffs(
-              camera_info->distortion_model, camera_info->distortion_coefficients);
+          ASSERT(camera_info->distortion_model == CameraBase::DistortionModel::PLUMB_BOB);
+
+          auto dist =
+              std::array<double, 5>{camera_info->distortion_coefficients.plumb_bob.k1,
+                                    camera_info->distortion_coefficients.plumb_bob.k2,
+                                    camera_info->distortion_coefficients.plumb_bob.p1,
+                                    camera_info->distortion_coefficients.plumb_bob.p2,
+                                    camera_info->distortion_coefficients.plumb_bob.k3};
 
           self->pnp_solver_ =
               std::make_unique<PnPSolver>(camera_info->camera_matrix, dist);
@@ -280,7 +286,7 @@ void ArmorDetector::ImageCallback(cv::Mat* img_msg)
   for (const auto& armor : ARMORS)
   {
     cv::Mat rvec, tvec;
-    const bool SUCCESS = pnp_solver_->solvePnP(armor, rvec, tvec);
+    const bool SUCCESS = pnp_solver_->SolvePnP(armor, rvec, tvec);
     if (!SUCCESS)
     {
       XR_LOG_WARN("PnP failed!");
@@ -310,7 +316,7 @@ void ArmorDetector::ImageCallback(cv::Mat* img_msg)
                  armor_msg.pose.translation.y(), armor_msg.pose.translation.z());
 
     armor_msg.distance_to_image_center =
-        pnp_solver_->calculateDistanceToCenter(armor.center);
+        pnp_solver_->CalculateDistanceToCenter(armor.center);
 
     armors_msg_.emplace_back(std::move(armor_msg));
   }
