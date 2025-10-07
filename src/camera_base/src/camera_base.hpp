@@ -15,6 +15,7 @@
 // STL
 #include <array>
 #include <cstdint>
+#include <initializer_list>
 
 /**
  * @class CameraBase

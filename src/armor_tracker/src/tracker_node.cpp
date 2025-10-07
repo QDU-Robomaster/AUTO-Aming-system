@@ -29,8 +29,7 @@ ArmorTrackerNode::ArmorTrackerNode(
       r_xyz_factor(ekf_r_xyz_factor),
       r_yaw(ekf_r_yaw),
       lost_time_thres_(tracker_lost_time_thres),
-      base_transform_static_(base_transform_static),
-      target_frame_(target_frame)
+      base_transform_static_(base_transform_static)
 {
   XR_LOG_INFO("Starting TrackerNode!");
   // Tracker
@@ -203,7 +202,7 @@ void ArmorTrackerNode::armorsCallback(ArmorDetectorResults& armors_msg)
   TrackerInfo info_msg;
   SolveTrajectory::Target target_msg;
   Send send_msg;
-  strncpy(target_msg.id.data(), target_frame_.c_str(), target_frame_.size());
+  target_msg.id = ArmorNumber::INVALID;
 
   auto time = LibXR::Timebase::GetMicroseconds();
 
@@ -239,7 +238,7 @@ void ArmorTrackerNode::armorsCallback(ArmorDetectorResults& armors_msg)
       target_msg.tracking = true;
       // Fill target message
       const auto& state = tracker_->target_state;
-      strncpy(target_msg.id.data(), tracker_->tracked_id.c_str(), target_frame_.size());
+      target_msg.id = tracker_->tracked_id;
       target_msg.armors_num = static_cast<int>(tracker_->tracked_armors_num);
       target_msg.position.x() = state(0);
       target_msg.velocity.x() = state(1);

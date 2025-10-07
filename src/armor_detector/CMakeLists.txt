@@ -18,8 +18,7 @@ find_package(OpenCV REQUIRED)
 #   DIRECTORY src
 # )
 add_library(${PROJECT_NAME} STATIC 
-  src/detector.cpp
-  src/detector_node.cpp
+  src/armor_detector.cpp
   src/number_classifier.cpp
   src/pnp_solver.cpp
 )
@@ -36,4 +35,4 @@ target_link_libraries(${PROJECT_NAME}
   PUBLIC xr
 )
 
-add_compile_definitions(MODEL_PATH="${CMAKE_CURRENT_SOURCE_DIR}/model")
+add_compile_definitions(MODEL_PATH="${CMAKE_CURRENT_SOURCE_DIR}/model/mlp.onnx")

@@ -8,6 +8,9 @@ set(CMAKE_CXX_STANDARD_REQUIRED ON)
 ## 强制启用警告
 add_definitions(-Wall -Werror)
 
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fdata-sections -ffunction-sections")
+set(CMAKE_CXX_FLAGS "${CMAKE_C_FLAGS} -fno-threadsafe-statics")
+
 ## 导出编译命令以便使用 clangd
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 

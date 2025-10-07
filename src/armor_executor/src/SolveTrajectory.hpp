@@ -12,6 +12,7 @@ typedef unsigned char uint8_t;
 #include <string>
 #include <vector>
 
+#include "armor.hpp"
 #include "libxr.hpp"
 
 class SolveTrajectory
@@ -53,7 +54,7 @@ class SolveTrajectory
   struct Target
   {
     bool tracking;
-    std::array<char, 32> id;
+    ArmorNumber id;
     int armors_num;
     Eigen::Matrix<double, 3, 1> position;
     Eigen::Matrix<double, 3, 1> velocity;

@@ -12,7 +12,7 @@
 
 Tracker::Tracker(double max_match_distance, double max_match_yaw_diff)
     : tracker_state(LOST),
-      tracked_id(std::string("")),
+      tracked_id(ArmorNumber::INVALID),
       measurement(Eigen::VectorXd::Zero(4)),
       target_state(Eigen::VectorXd::Zero(9)),
       max_match_distance_(max_match_distance),
@@ -195,7 +195,7 @@ void Tracker::initEKF(const ArmorDetectorResult& a)
 
 void Tracker::updateArmorsNum(const ArmorDetectorResult& armor)
 {
-  if (tracked_id == "outpost")
+  if (tracked_id == ArmorNumber::OUTPOST)
   {
     tracked_armors_num = ArmorsNum::OUTPOST_3;  // 前哨站
   }

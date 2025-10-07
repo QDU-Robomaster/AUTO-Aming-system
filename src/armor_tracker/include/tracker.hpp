@@ -9,7 +9,7 @@
 #include <string>
 
 #include "armor.hpp"
-#include "detector.hpp"
+#include "armor_detector.hpp"
 #include "extended_kalman_filter.hpp"
 #include "transform.hpp"
 
@@ -43,7 +43,7 @@ class Tracker  // 整车观测
   } tracker_state;
 
   // 装甲板情况
-  std::string tracked_id;             // 装甲板号
+  ArmorNumber tracked_id;             // 装甲板号
   ArmorDetectorResult tracked_armor;  // 被跟踪的装甲板
   ArmorsNum tracked_armors_num;       // 被跟踪装甲版数
 

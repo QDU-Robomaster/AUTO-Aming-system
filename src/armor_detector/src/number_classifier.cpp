@@ -1,42 +1,35 @@
 // OpenCV
+#include <initializer_list>
 #include <opencv2/opencv.hpp>
 
 // STL
+#include <math.h>
+
 #include <algorithm>
-#include <cstddef>
-#include <fstream>
-#include <map>
 #include <string>
 #include <vector>
 
 #include "armor.hpp"
 #include "number_classifier.hpp"
 
-NumberClassifier::NumberClassifier(const std::string& model_path,
-                                   const std::string& label_path, const double thre,
-                                   const std::vector<std::string>& ignore_classes)
-    : threshold(thre), ignore_classes_(ignore_classes)
+NumberClassifier::NumberClassifier(
+    const std::string& model_path, double thre,
+    const std::initializer_list<ArmorNumber>& ignore_classes)
+    : ignore_classes_(ignore_classes), threshold_(thre)
 {
   net_ = cv::dnn::readNetFromONNX(model_path);
-
-  std::ifstream label_file(label_path);
-  std::string line;
-  while (std::getline(label_file, line))
-  {
-    class_names_.push_back(line);
-  }
 }
 
-void NumberClassifier::extractNumbers(const cv::Mat& src, std::vector<Armor>& armors)
+void NumberClassifier::ExtractNumbers(const cv::Mat& src, std::vector<Armor>& armors)
 {
   // Light length in image
-  const int light_length = 12;
+  const int LIGHT_LENGTH = 12;
   // Image size after warp（透视变换）
-  const int warp_height = 28;
-  const int small_armor_width = 32;
-  const int large_armor_width = 54;
+  const int WARP_HEIGHT = 28;
+  const int SMALL_ARMOR_WIDTH = 32;
+  const int LARGE_ARMOR_WIDTH = 54;
   // Number ROI size
-  const cv::Size roi_size(20, 28);
+  const cv::Size ROI_SIZE(20, 28);
 
   for (auto& armor : armors)
   {
@@ -44,24 +37,24 @@ void NumberClassifier::extractNumbers(const cv::Mat& src, std::vector<Armor>& ar
     cv::Point2f lights_vertices[4] = {armor.left_light.bottom, armor.left_light.top,
                                       armor.right_light.top, armor.right_light.bottom};
 
-    const int top_light_y = (warp_height - light_length) / 2 - 1;
-    const int bottom_light_y = top_light_y + light_length;
-    const int warp_width =
-        armor.type == ArmorType::SMALL ? small_armor_width : large_armor_width;
+    const int TOP_LIGHT_Y = (WARP_HEIGHT - LIGHT_LENGTH) / 2 - 1;
+    const int BOTTOM_LIGHT_Y = TOP_LIGHT_Y + LIGHT_LENGTH;
+    const int WARP_WIDTH =
+        armor.type == ArmorType::SMALL ? SMALL_ARMOR_WIDTH : LARGE_ARMOR_WIDTH;
     cv::Point2f target_vertices[4] = {
-        cv::Point(0, bottom_light_y),
-        cv::Point(0, top_light_y),
-        cv::Point(warp_width - 1, top_light_y),
-        cv::Point(warp_width - 1, bottom_light_y),
+        cv::Point(0, BOTTOM_LIGHT_Y),
+        cv::Point(0, TOP_LIGHT_Y),
+        cv::Point(WARP_WIDTH - 1, TOP_LIGHT_Y),
+        cv::Point(WARP_WIDTH - 1, BOTTOM_LIGHT_Y),
     };
     cv::Mat number_image;
     auto rotation_matrix = cv::getPerspectiveTransform(lights_vertices, target_vertices);
     cv::warpPerspective(src, number_image, rotation_matrix,
-                        cv::Size(warp_width, warp_height));
+                        cv::Size(WARP_WIDTH, WARP_HEIGHT));
 
     // Get ROI
     number_image =
-        number_image(cv::Rect(cv::Point((warp_width - roi_size.width) / 2, 0), roi_size));
+        number_image(cv::Rect(cv::Point((WARP_WIDTH - ROI_SIZE.width) / 2, 0), ROI_SIZE));
 
     // Binarize
     cv::cvtColor(number_image, number_image, cv::COLOR_RGB2GRAY);
@@ -73,7 +66,7 @@ void NumberClassifier::extractNumbers(const cv::Mat& src, std::vector<Armor>& ar
   }
 }
 
-void NumberClassifier::classify(std::vector<Armor>& armors)
+void NumberClassifier::Classify(std::vector<Armor>& armors)
 {
   for (auto& armor : armors)
   {
@@ -101,16 +94,13 @@ void NumberClassifier::classify(std::vector<Armor>& armors)
     float sum = static_cast<float>(cv::sum(softmax_prob)[0]);
     softmax_prob /= sum;
 
-    double confidence;
+    double confidence = 0;
     cv::Point class_id_point;
     minMaxLoc(softmax_prob.reshape(1, 1), nullptr, &confidence, nullptr, &class_id_point);
     int label_id = class_id_point.x;
 
-    armor.confidence = confidence;
-    armor.number = class_names_[label_id];
-
-    (void)snprintf(armor.classification_result.data(), armor.classification_result.size(),
-                   "%s: %.1f%%", class_names_[label_id].c_str(), confidence * 100.0);
+    armor.confidence = static_cast<float>(confidence);
+    armor.number = static_cast<typeof(armor.number)>(label_id);
   }
 
   armors.erase(
@@ -119,7 +109,7 @@ void NumberClassifier::classify(std::vector<Armor>& armors)
               armors.begin(), armors.end(),
               [this](const Armor& armor)
               {
-                if (armor.confidence < threshold)
+                if (armor.confidence < threshold_)
                 {
                   return true;
                 }
@@ -135,12 +125,14 @@ void NumberClassifier::classify(std::vector<Armor>& armors)
                 bool mismatch_armor_type = false;
                 if (armor.type == ArmorType::LARGE)
                 {
-                  mismatch_armor_type = armor.number == "outpost" ||
-                                        armor.number == "2" || armor.number == "guard";
+                  mismatch_armor_type = armor.number == ArmorNumber::OUTPOST ||
+                                        armor.number == ArmorNumber::TWO ||
+                                        armor.number == ArmorNumber::GUARD;
                 }
                 else if (armor.type == ArmorType::SMALL)
                 {
-                  mismatch_armor_type = armor.number == "1" || armor.number == "base";
+                  mismatch_armor_type = armor.number == ArmorNumber::ONE ||
+                                        armor.number == ArmorNumber::BASE;
                 }
                 return mismatch_armor_type;
               }),

@@ -69,7 +69,6 @@ class ArmorTrackerNode
   LibXR::Transform<double> base_transform_static_;
   LibXR::Quaternion<double> base_rotation_;
   LibXR::Mutex base_rotation_lock_;
-  std::string target_frame_;
   LibXR::Topic tf_topic_ = LibXR::Topic("/tf", sizeof(LibXR::Quaternion<double>));
 
   // Tracker info publisher
