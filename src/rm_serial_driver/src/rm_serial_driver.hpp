@@ -37,7 +37,7 @@ class RMSerialDriver
 
   void receiveData();
 
-  void sendData(rm_auto_aim::ArmorTrackerNode::Send msg);
+  void sendData(ArmorTrackerNode::Send msg);
 
   void reopenPort();
 

@@ -29,11 +29,9 @@ target_include_directories(
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/hik_camera)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/uvc_camera)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/camera_base)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/rm_auto_aim/armor_detector)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/rm_auto_aim/armor_executor)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/rm_auto_aim/armor_tracker)
-# add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/rm_gimbal_description)
-# add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/rm_auto_aim/auto_aim_interfaces)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/armor_detector)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/armor_executor)
+add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/armor_tracker)
 add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/rm_serial_driver)
 
 target_link_libraries(${PROJECT_NAME}_node

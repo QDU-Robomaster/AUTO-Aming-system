@@ -50,8 +50,7 @@ RMSerialDriver::RMSerialDriver(double timestamp_offset, std::string device_name,
       [](bool, RMSerialDriver* serial, LibXR::RawData& data)
       {
         XR_LOG_DEBUG("SerialDriver send data");
-        auto send_data =
-            reinterpret_cast<rm_auto_aim::ArmorTrackerNode::Send*>(data.addr_);
+        auto send_data = reinterpret_cast<ArmorTrackerNode::Send*>(data.addr_);
         serial->sendData(*send_data);
       },
       this);
@@ -146,7 +145,7 @@ void RMSerialDriver::receiveData()
 }
 
 //! 发送数据 视觉 -> 电控
-void RMSerialDriver::sendData(rm_auto_aim::ArmorTrackerNode::Send msg)
+void RMSerialDriver::sendData(ArmorTrackerNode::Send msg)
 {
   static LibXR::WriteOperation write_op;
 

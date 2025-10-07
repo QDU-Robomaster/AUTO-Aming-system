@@ -107,28 +107,26 @@ int main(int, char**)
   LibXR::Thread::Sleep(100);
 
   // Detector
-  rm_auto_aim::ArmorDetectorNode armor_detector_node(
-      true,         // debug
-      1,            // detect_color
-      85,           // binary_thres
-      0.1,          // light_min_ratio
-      0.4,          // light_max_ratio
-      40.0,         // light_max_angle
-      0.7,          // armor_min_light_ratio
-      0.8,          // armor_min_small_center_distance
-      3.2,          // armor_max_small_center_distance
-      3.2,          // armor_min_large_center_distance
-      5.5,          // armor_max_large_center_distance
-      35.0,         // armor_max_angle
-      0.6,          // classifier_threshold
-      {"negative"}  // ignore_classes
+  ArmorDetectorNode armor_detector_node(true,         // debug
+                                        1,            // detect_color
+                                        85,           // binary_thres
+                                        0.1,          // light_min_ratio
+                                        0.4,          // light_max_ratio
+                                        40.0,         // light_max_angle
+                                        0.7,          // armor_min_light_ratio
+                                        0.8,          // armor_min_small_center_distance
+                                        3.2,          // armor_max_small_center_distance
+                                        3.2,          // armor_min_large_center_distance
+                                        5.5,          // armor_max_large_center_distance
+                                        35.0,         // armor_max_angle
+                                        0.6,          // classifier_threshold
+                                        {"negative"}  // ignore_classes
   );
 
   // Tracker
-  rm_auto_aim::ArmorTrackerNode armor_tracker_node(10.0,  // max_armor_distance
-                                                   0.5, 1.0, 5, 1.0, 0.038, 10, 0.18375,
-                                                   0.0, 0.05, 5.0, 80.0, 0.00025, 0.005,
-                                                   "gimbal_odom");
+  ArmorTrackerNode armor_tracker_node(10.0,  // max_armor_distance
+                                      0.5, 1.0, 5, 1.0, 0.038, 10, 0.18375, 0.0, 0.05,
+                                      5.0, 80.0, 0.00025, 0.005, "gimbal_odom");
   LibXR::Thread::Sleep(100);
 
 // Serial
