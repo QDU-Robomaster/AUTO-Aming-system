@@ -58,19 +58,32 @@ ArmorDetectorNode::ArmorDetectorNode(bool debug, int detect_color, int binary_th
         static bool inited = false;
         if (!inited)
         {
+#ifdef XR_LOG_PASS
           XR_LOG_PASS("Got camera info!");
+#endif
           inited = true;
 
+          // cx=K(0,2)=index2, cy=K(1,2)=index5（行优先）
           detector_node->cam_center_ =
-              cv::Point2f(camera_info->camera_matrix[2], camera_info->camera_matrix[5]);
+              cv::Point2f(static_cast<float>(camera_info->camera_matrix[2]),
+                          static_cast<float>(camera_info->camera_matrix[5]));
+
           detector_node->cam_info_ =
               std::make_shared<CameraBase::CameraInfo>(*camera_info);
-          std::vector<double> distortion_coefficients;
-          distortion_coefficients.insert(distortion_coefficients.end(),
-                                         camera_info->distortion_coefficients.begin(),
-                                         camera_info->distortion_coefficients.end());
+
+          // 新版：按模型提取合适长度的畸变参数
+          std::vector<double> distortion_coefficients =
+              CameraBase::CameraInfo::ToPnPDistCoeffs(
+                  camera_info->distortion_model, camera_info->distortion_coefficients);
+
+          // 创建 PnP 求解器
           detector_node->pnp_solver_ = std::make_unique<PnPSolver>(
               camera_info->camera_matrix, distortion_coefficients);
+
+          // TODO: 若输入为“已矫正/立体矫正”图像，推荐：
+          // 1) 使用 projection_matrix 的前 3×3 作为内参传入；
+          // 2) 畸变向量置空（NONE）。
+          // 以避免误把原始畸变用于矫正后的图像。
         }
       },
       this);

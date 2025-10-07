@@ -7,7 +7,7 @@ add_definitions(-Wall -Werror)
 
 find_package(OpenCV 4 REQUIRED COMPONENTS core imgproc highgui)
 
-add_library(${PROJECT_NAME} STATIC ${CMAKE_CURRENT_SOURCE_DIR}/src/hik_camera_node.cpp)
+add_library(${PROJECT_NAME} STATIC ${CMAKE_CURRENT_SOURCE_DIR}/src/hik_camera.cpp)
 
 if(CMAKE_SYSTEM_PROCESSOR MATCHES "x86_64")
   target_link_directories(${PROJECT_NAME} PUBLIC hikSDK/lib/amd64)

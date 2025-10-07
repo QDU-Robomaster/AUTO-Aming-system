@@ -3,22 +3,14 @@
 #include "MvCameraControl.h"
 #include "camera_base.hpp"
 #include "libxr.hpp"
-#include "libxr_def.hpp"
-#include "libxr_time.hpp"
 #include "message.hpp"
-#include "timebase.hpp"
 
 // STL
-#include <algorithm>
 #include <array>
 #include <atomic>
-#include <chrono>
 #include <cstdint>
 #include <memory>
 #include <opencv2/core/mat.hpp>
-#include <string>
-#include <thread>
-#include <vector>
 
 namespace hik_camera
 {
@@ -31,20 +23,6 @@ class HikCameraNode
   static constexpr size_t BUF_BYTES = static_cast<size_t>(MAX_W) * MAX_H * CH;
 
  public:
-  struct InitParam
-  {
-    std::string camera_name = "narrow_stereo";
-    int image_width = 1440;
-    int image_height = 1080;
-    std::array<double, 9> camera_matrix{{0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
-    std::array<double, 5> distortion_coefficients{0.0, 0.0, 0.0, 0.0, 0.0};
-    std::array<double, 9> rectification_matrix{
-        {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
-    std::array<double, 12> projection_matrix{
-        {0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0}};
-    std::array<char, 32> distortion_model = {"plumb_bob"};
-  };
-
   struct RuntimeParam
   {
     float gain = 32.0f;
@@ -56,24 +34,22 @@ class HikCameraNode
   HikCameraNode();
 
   // Main constructor (definition in .cpp)
-  explicit HikCameraNode(const InitParam& init, const RuntimeParam& runtime);
+  explicit HikCameraNode(const CameraBase::CameraInfo& info, const RuntimeParam& runtime);
 
   ~HikCameraNode();
 
   void SetRuntimeParam(const RuntimeParam& p);
 
-  // Trivial getters can stay inline
-  RuntimeParam GetRuntimeParam() const { return runtime_; }
-  InitParam GetInitParam() const { return init_; }
-
  private:
   void UpdateParameters();
+
+  static void ThreadFun(HikCameraNode* self);
 
   // Runtime state
   std::unique_ptr<std::array<uint8_t, BUF_BYTES>> frame_buf_{};  // large RGB buffer
 
   // Parameters
-  InitParam init_{};
+  CameraBase::CameraInfo info_;
   RuntimeParam runtime_{};
 
   // Topics
@@ -85,11 +61,9 @@ class HikCameraNode
   MV_IMAGE_BASIC_INFO img_info_{};
   MV_CC_PIXEL_CONVERT_PARAM convert_param_{};
 
-  std::string camera_name_;
-
   int fail_count_ = 0;
   std::atomic<bool> running_{false};
-  std::thread capture_thread_{};
+  LibXR::Thread capture_thread_{};
 };
 
 }  // namespace hik_camera
