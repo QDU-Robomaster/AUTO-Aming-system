@@ -13,42 +13,22 @@ add_compile_options(-g -O0)
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # libxr
+set(XROBOT_MODULES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/Modules)
 add_subdirectory(libxr)
 
-add_executable(${PROJECT_NAME}_node src/main.cpp)
+add_executable(${PROJECT_NAME} User/main.cpp)
 
 target_link_libraries(
-    ${PROJECT_NAME}_node
+    ${PROJECT_NAME}
     PUBLIC xr
 )
 
 target_include_directories(
-    ${PROJECT_NAME}_node
+    ${PROJECT_NAME}
     PUBLIC $<TARGET_PROPERTY:xr,INTERFACE_INCLUDE_DIRECTORIES>
 )
 
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/hik_camera)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/uvc_camera)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/camera_base)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/armor_detector)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/armor_executor)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/armor_tracker)
-add_subdirectory(${CMAKE_CURRENT_SOURCE_DIR}/src/rm_serial_driver)
-
-target_link_libraries(${PROJECT_NAME}_node
-  PUBLIC hik_camera
-  PUBLIC uvc_camera
-  PUBLIC armor_detector
-  PUBLIC armor_executor
-  PUBLIC armor_tracker
-  PUBLIC rm_serial_driver
-)
-
-# 安装文件
-install(TARGETS ${PROJECT_NAME}_node
-  DESTINATION lib/${PROJECT_NAME}
-)
-
-install(DIRECTORY config/ launch/
-  DESTINATION share/${PROJECT_NAME}
+target_include_directories(
+    ${PROJECT_NAME}
+    PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}/User
 )

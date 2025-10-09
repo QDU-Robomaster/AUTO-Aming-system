@@ -1,0 +1,27 @@
+name: build test
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  pull_request:
+    branches: [ "main", "master" ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container:
+      image: ghcr.io/xrobot-org/docker-image-webots:main
+      options: --user 0
+
+    steps:
+    - uses: actions/checkout@v4
+    - name: init submodule
+      run: git config --global --add safe.directory "$GITHUB_WORKSPACE" && git submodule update --init --recursive
+    - name: install pip packages
+      run: pip install xrobot
+    - name: get modules && setup
+      run: xrobot_setup
+    - name: config cmake
+      run: cmake . -Bbuild -G Ninja
+    - name: build
+      run: cmake --build build
