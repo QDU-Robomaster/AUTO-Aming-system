@@ -14,6 +14,7 @@ set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 # libxr
 set(XROBOT_MODULES_DIR ${CMAKE_CURRENT_SOURCE_DIR}/Modules)
+set(LIBXR_LOG_OUTPUT_LEVEL 2)
 add_subdirectory(libxr)
 
 add_executable(${PROJECT_NAME} User/main.cpp)

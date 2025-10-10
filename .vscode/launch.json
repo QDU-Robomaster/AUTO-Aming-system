@@ -8,7 +8,7 @@
             "type": "lldb",
             "request": "launch",
             "name": "Debug",
-            "program": "${workspaceFolder}/build/rm_auto_aim_node",
+            "program": "${workspaceFolder}/build/rm_auto_aim",
             "args": [],
             "cwd": "${workspaceFolder}"
         }
